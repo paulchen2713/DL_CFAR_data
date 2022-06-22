@@ -1,5 +1,5 @@
 %
-function [rdmap_clutter, rdmap_noclutter, label, noise] = newrdmap2(H, SNR)
+function [rdmap_clutter, rdmap_noclutter, label, noise] = newrdmap3(H, SNR)
     % fprintf('Y')
     %
     % Simulation settings
