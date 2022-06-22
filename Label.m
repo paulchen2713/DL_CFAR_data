@@ -10,9 +10,9 @@ clc;
 % load training_noT_label_target_H4_SNR6.mat                  % 需改SNR
 % load validation_noT_label_target_H4_SNR6.mat                % 需改SNR
 % 
-SNR=6;
-CNR=15;
-H=4;
+SNR = 6;
+CNR = 15;
+H = 4;
 %
 % load para.mat % 沒有 para.mat 檔案 No such file or directory.
 %
