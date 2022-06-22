@@ -1,47 +1,60 @@
 %
-function [rdmap_clutter,rdmap_noclutter,label,noise]=newrdmap2(H,SNR)
+function [rdmap_clutter, rdmap_noclutter, label, noise] = newrdmap2(H, SNR)
     % fprintf('Y')
-    %% Simulation settings
+    %
+    % Simulation settings
+    %
     TotalSimulationTime = 1;    % number of RD maps
     CarrierFreq = 78*10^9;
-    %% MIMO parameter settings
+    %
+    % MIMO parameter settings
+    %
     numTx = 1;
     numRx = 1;
-    %% Frame-related parameters
+    %
+    % Frame-related parameters
     % RD map 大小為N*M
-    N = 16;    % number of subcarrier
-    Nfft = N;    % number of FFT points in frequency domain
+    N = 16;       % number of subcarrier
+    M = 16;       % number of OFDM symbol
+    Nfft  = N;    % number of FFT points in frequency domain
     frame = 1;    % number of frame used
-    M = 16;    % number of OFDM symbol
-    Mfft = M;    % number of FFT points in time domain
-
-    % clutter
+    Mfft  = M;    % number of FFT points in time domain
+    %
+    % clutter parameters
+    % 
     CNR = 15; %
     clutter_power = 0.5*10^(CNR/10);
     clutter_size_range = 5;
     clutter_size_Doppler = 5;
-    %% OFDM-related parameters
+    % 
+    % OFDM-related parameters
+    % 
     BW = 1*10^9;
     SubcarrierSpacing = BW/N;
     PeriodOFDMsymbol = 1/SubcarrierSpacing;
     CP = 49*PeriodOFDMsymbol;
     PeriodOFDMsymbol_whole = PeriodOFDMsymbol + CP;
     PeriodFrame = PeriodOFDMsymbol_whole * M;
-    %% Common parameter definition
+    % 
+    % Common parameter definition
+    % 
     c = 3*10^8;    % speed of light
-    FreqDopp = @(RelVelocity) 2*RelVelocity*CarrierFreq/c;    % Doppler shift
-    RoundTripTime = @(d) 2*d/c;    % round trip time function
-    %% Specifications
-    d_unamb = c/2/SubcarrierSpacing;    % unambiguity range
-    v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;    % unambiguity velocity
+    FreqDopp = @(RelVelocity) 2*RelVelocity*CarrierFreq/c; % Doppler shift function
+    RoundTripTime = @(d) 2*d/c;                            % Round Trip Time (RTT) function
+    % 
+    % Specifications
+    % 
+    d_unamb = c/2/SubcarrierSpacing;                  % unambiguity range
+    v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole; % unambiguity velocity
     d_rel = d_unamb/N;    % search resolution of range
     v_rel = v_unamb/M;    % search resolution of velocity
-    %% Data matrix construction
-
-    nmaxx=ones(H,1);
-    mmaxx=ones(H,1);
-    tn=zeros(H,1);
-    tm=zeros(H,1);
+    % 
+    % Data matrix construction
+    % 
+    nmaxx = ones(H, 1);
+    mmaxx = ones(H, 1);
+    tn = zeros(H, 1);
+    tm = zeros(H, 1);
     while sum(abs(nmaxx-tn)==1)>0 || sum(abs(mmaxx-tm)==1)>0
     %     fprintf('X')
     for g = 1: length(SNR)
@@ -80,7 +93,7 @@ function [rdmap_clutter,rdmap_noclutter,label,noise]=newrdmap2(H,SNR)
                 F_Channel{index_target} =  F_Tx.*(range*doppler)*exp(1j*NuiPhase);
                 RD_map_single_pure_target = abs(fft2(F_Channel{index_target}./F_Tx,N,M));%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 [nn,mm]=find(RD_map_single_pure_target == max(max(RD_map_single_pure_target)));
-                tempMap(nn,mm) = 1;%%%%%%%%%%%%%%%%%%%%%
+                tempMap(nn,mm) = 1; %%%%%%%%%%%%%%%%%%%%%
             end       
            end
             target_Map(:,:,TimeIndex) = tempMap;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
