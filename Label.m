@@ -1,5 +1,6 @@
 % 
-% 
+% Label function
+%   patch. June 22, 2022
 % 
 clear;
 clc;
