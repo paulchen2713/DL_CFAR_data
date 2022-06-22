@@ -1,47 +1,55 @@
-clear all;
-close all;
-% load training_noT_label_target_trun_clutter15_H4_SNR6.mat % »İ§ïSNR
- load validation_noT_label_target_trun_clutter15_H4_SNR6.mat % »İ§ïSNR
-% load training_noT_label_target_H4_SNR6.mat % »İ§ïSNR
-% load validation_noT_label_target_H4_SNR6.mat % »İ§ïSNR
-                                   SNR=6;
-                                   CNR=15;
+% 
+% 
+% 
+clear;
+clc;
+% 
+% load training_noT_label_target_trun_clutter15_H4_SNR6.mat   % éœ€æ”¹SNR
+% load validation_noT_label_target_trun_clutter15_H4_SNR6.mat % éœ€æ”¹SNR
+% load training_noT_label_target_H4_SNR6.mat                  % éœ€æ”¹SNR
+% load validation_noT_label_target_H4_SNR6.mat                % éœ€æ”¹SNR
+% 
+SNR=6;
+CNR=15;
 H=4;
-% load para.mat
-% fid=fopen(['D:\YU\my_yolo3\','2007_train.txt'],'a');%¼g¤JÀÉ®×¸ô®|(¥Î"a"®É¡A¦pªG¤å¦r¤¤¤w¸g¦s¦b¸ê®Æ¡A¤£·|²MªÅ¸ê®Æ¡A¦Ó¬O¦b¸ê®Æ¤§«á¼g¤J¡A¦Ó"w"·|²MªÅ­ì¥»ªº¸ê®Æ¡A­«·s¼g¤J)
-fid=fopen(['D:\YU\my_yolo3\','2007_val.txt'],'a');
-for i = 1:size(RD_map_label,3)
-    [nn,mm]=find(RD_map_label(:,:,i)==1); % targetªº¦ì¸m
+%
+% load para.mat % æ²’æœ‰ para.mat æª”æ¡ˆ No such file or directory.
+%
+% fid=fopen(['D:\YU\my_yolo3\','2007_train.txt'],'a'); %å¯«å…¥æª”æ¡ˆè·¯å¾‘(ç”¨"a"æ™‚ï¼Œå¦‚æœæ–‡å­—ä¸­å·²ç¶“å­˜åœ¨è³‡æ–™ï¼Œä¸æœƒæ¸…ç©ºè³‡æ–™ï¼Œè€Œæ˜¯åœ¨è³‡æ–™ä¹‹å¾Œå¯«å…¥ï¼Œè€Œ"w"æœƒæ¸…ç©ºåŸæœ¬çš„è³‡æ–™ï¼Œé‡æ–°å¯«å…¥)
+% fid=fopen(['D:\YU\my_yolo3\','2007_val.txt'],'a');
+%
+% æ²’æœ‰ RD_map_label çš„è³‡æ–™
+for i = 1:size(RD_map_label, 3)
+    [nn, mm] = find(RD_map_label(:, :, i) == 1); % targetçš„ä½ç½®
     for ii = 1:H
-        ymin(ii) = nn(ii)-1;xmin(ii) = mm(ii)-1; % ¥ª¤W
-        ymax(ii) = nn(ii)+1;xmax(ii) = mm(ii)+1; % ¥k¤U
+        ymin(ii) = nn(ii)-1; xmin(ii) = mm(ii)-1; % å·¦ä¸Š
+        ymax(ii) = nn(ii)+1; xmax(ii) = mm(ii)+1; % å³ä¸‹
     end    
 %     fprintf(fid,'VOC2007\\JPEGImages\\training_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1));
 %     fprintf(fid,'VOC2007\\JPEGImages_val\\validation_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1));
-
+% 
 %     fprintf(fid,'VOC2007\\JPEGImages\\training_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2));
 %     fprintf(fid,'VOC2007\\JPEGImages_val\\validation_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2));
-
+% 
 %     fprintf(fid,'VOC2007\\JPEGImages\\training_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3));
 %     fprintf(fid,'VOC2007\\JPEGImages_val\\validation_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3));
-
+% 
 %     fprintf(fid,'VOC2007\\JPEGImages\\training_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3),xmin(4),ymin(4),xmax(4),ymax(4));
 %     fprintf(fid,'VOC2007\\JPEGImages_val\\validation_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3),xmin(4),ymin(4),xmax(4),ymax(4));
-
-% clutter
+    %
+    % clutter
+    %
 %     fprintf(fid,'VOC2007\\JPEGImages_trun\\training_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1));
 %     fprintf(fid,'VOC2007\\JPEGImages_val_trun\\validation_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1));
-
+% 
 %     fprintf(fid,'VOC2007\\JPEGImages_trun\\training_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2));
 %     fprintf(fid,'VOC2007\\JPEGImages_val_trun\\validation_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2));
-
+% 
 %     fprintf(fid,'VOC2007\\JPEGImages_trun\\training_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3));
 %     fprintf(fid,'VOC2007\\JPEGImages_val_trun\\validation_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3));
-
+% 
 %     fprintf(fid,'VOC2007\\JPEGImages_trun\\training_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3),xmin(4),ymin(4),xmax(4),ymax(4));
-    fprintf(fid,'VOC2007\\JPEGImages_val_trun\\validation_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3),xmin(4),ymin(4),xmax(4),ymax(4));
+%     fprintf(fid,'VOC2007\\JPEGImages_val_trun\\validation_noT_truncated_clutter%d_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',CNR,H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2),xmin(3),ymin(3),xmax(3),ymax(3),xmin(4),ymin(4),xmax(4),ymax(4));
 end
 fclose(fid);
 
-
- 
