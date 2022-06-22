@@ -14,7 +14,8 @@ SNR = 6;
 CNR = 15;
 H = 4;
 %
-% load para.mat % 沒有 para.mat 檔案 No such file or directory.
+% para.mat 檔案 存有 H SNR N M 的資料 從 RD_map_dataset.m 或 RD_map_dataset_clutter.m 產生
+load para.mat 
 %
 % fid=fopen(['D:\YU\my_yolo3\','2007_train.txt'],'a'); %寫入檔案路徑(用"a"時，如果文字中已經存在資料，不會清空資料，而是在資料之後寫入，而"w"會清空原本的資料，重新寫入)
 % fid=fopen(['D:\YU\my_yolo3\','2007_val.txt'],'a');
