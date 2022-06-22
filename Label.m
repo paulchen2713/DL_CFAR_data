@@ -1,5 +1,5 @@
 % 
-% Label function
+% Label main program
 %   patch. June 22, 2022
 % 
 clear;
