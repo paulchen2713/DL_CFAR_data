@@ -1,5 +1,7 @@
 %
 % RD_map_dataset main program
+%   patch. June 22, 2022
+%          July 02, 2022
 %
 clear;
 clc;
@@ -276,26 +278,26 @@ end
 %
 % RD_map
 %
-figure(1) % 只有target
-see1 = RD_map_label(:,:,1);
-mesh(see1,'edgecolor','r');
+% figure(1) % 只有target
+% see1 = RD_map_label(:,:,1);
+% mesh(see1,'edgecolor','r');
 % 
-figure(2) % 只有noise
-see2 = reshape(RDmap_label_raw(1,:),N,M);
-mesh(see2,'edgecolor','r');
-zlim([0,10])
+% figure(2) % 只有noise
+% see2 = reshape(RDmap_label_raw(1,:),N,M);
+% mesh(see2,'edgecolor','r');
+% zlim([0,10])
 % 
-figure(3) % 沒有clutter
-see3 = reshape(RDmap_input_raw_noclutter2(1,:),N,M);
-mesh(see3,'edgecolor','r');
+% figure(3) % 沒有clutter
+% see3 = reshape(RDmap_input_raw_noclutter2(1,:),N,M);
+% mesh(see3,'edgecolor','r');
 % 
-figure(10)
-imagesc(see3);
+% figure(10)
+% imagesc(see3);
 % 
-figure(4) % 經過truncated
-see4 = RD_map_truncated(:,:,1);
-mesh(see4,'edgecolor','r');
-title('Truncated')
+% figure(4) % 經過truncated
+% see4 = RD_map_truncated(:,:,1);
+% mesh(see4,'edgecolor','r');
+% title('Truncated')
 % 
 figure(5) % Dynamic range compression
 see5 = reshape(RDmap_input_raw_softknee(1,:),N,M);
@@ -304,15 +306,15 @@ title('Dynamic range compression')
 figure(11)
 imagesc(see5);
 % 
-figure(6) % Dynamic range compression
-see6 = reshape(RDmap_input_raw_log(1,:),N,M);
-mesh(see6,'edgecolor','r');
-title('Dynamic range compression: log')
+% figure(6) % Dynamic range compression
+% see6 = reshape(RDmap_input_raw_log(1,:),N,M);
+% mesh(see6,'edgecolor','r');
+% title('Dynamic range compression: log')
 % 
-figure(7) %  Normalize 0~1
-see7 = RD_map_normal(:,:,1);
-mesh(see7,'edgecolor','r');
-title('Normalize')
+% figure(7) %  Normalize 0~1
+% see7 = RD_map_normal(:,:,1);
+% mesh(see7,'edgecolor','r');
+% title('Normalize')
 %
 % validation
 %
@@ -329,17 +331,24 @@ title('Normalize')
 
 %
 % training
-%
-% save(['training_noT_noclutter_H' ,num2str(H) ,'_SNR',num2str(SNR),'.mat'],'RD_map_noclutter'); % for CFAR
-% save(['D:\YU\my_yolo3\DLCFAR\training_noT_truncated_H' ,num2str(H) ,'_SNR',num2str(SNR),'.mat'],'RDmap_input_raw_truncated'); % for DL-CFAR input
-% save(['D:\YU\my_yolo3\DLCFAR\training_noT_label_noise_H' ,num2str(H) ,'_SNR',num2str(SNR),'.mat'],'RDmap_label_raw'); % for DL-CFAR label(target)
+%   create 5 folders CFAR_data, DL_input, DL_label, VOC2007/JPEGImages, YOLO_label at current directory
+%   "CFAR_data" stores inputs for conventional CFAR detectors
+%   "DL_input", "DL_label" stores training inputs and labels for DL_CFAR
+%   "VOC2007/JPEGImages", "YOLO_label" stores training inputs and labels for YOLO_CFAR
+%   notes that YOLO_input should store in \VOC2007\JPEGImages for convenient
+% 
+save(['.\CFAR_data\CFAR_train_noT_noclutter_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_noclutter'); % for CFAR
+save(['.\DL_input\DL_input_train_noT_truncated_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RDmap_input_raw_truncated'); % for DL-CFAR input
+save(['.\DL_label\DL_label_train_noT_label_noise_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RDmap_label_raw'); % for DL-CFAR label(target)
 
-% for jj=1:size(RD_map_softknee,3)
-%     fileName = ['D:\YU\my_yolo3\VOC2007\JPEGImages\training_noT_softknee_H' num2str(H) '_SNR' num2str(SNR) '_f' num2str(jj) '.mat'];
-%     RD_map_yoloinput=RD_map_softknee(:,:,jj);
-%     save(fileName,'RD_map_yoloinput'); % for YOLO-CFAR input
-% end
-% save(['training_noT_label_target_H' ,num2str(H) ,'_SNR',num2str(SNR),'.mat'],'RD_map_label'); % for YOLO-CFAR label(target)
+for jj = 1:size(RD_map_softknee,3)
+    % fileName = ['D:\BeginnerMatlabProjects\RDMap\VOC2007\JPEGImages\training_noT_softknee_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(jj),'.mat'];
+    fileName = ['.\VOC2007\JPEGImages\YOLO_input_train_noT_softknee_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(jj),'.mat'];
+    RD_map_yoloinput = RD_map_softknee(:,:,jj);
+    save(fileName,'RD_map_yoloinput'); % for YOLO-CFAR input
+end
+% save(['training_noT_label_target_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_label'); % for YOLO-CFAR label(target)
+save(['.\YOLO_label\YOLO_label_train_noT_label_target_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_label');
 
 %
 % testing
@@ -360,7 +369,7 @@ title('Normalize')
 % save(['testing_noT_label_target_trun_H' ,num2str(H) ,'_SNR',num2str(SNR),'.mat'],'RD_map_label'); % for YOLO-CFAR label(target)
 % save(['testing_trainDNN_trun_H' ,num2str(H) ,'_SNR',num2str(SNR),'.mat'],'RD_map_truncated'); % for DNN input
 
-% save para H SNR N M;testing_trainDNN_softknee_20_H
+save para H SNR N M; % testing_trainDNN_softknee_20_H ???
 
 % RD_map_yoloinput = see5;
 % save(['D:\YU\my_yolo3\mAP-master\input\f1_H1_SNR6','.mat'],'RD_map_yoloinput');
