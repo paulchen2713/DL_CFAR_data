@@ -310,17 +310,23 @@ for iter = 1:max_iter
     % 
     RD_map_softknee = zeros(N, M, length(SNR));
     RD_map_log = zeros(N, M, length(SNR));
+    %
+    % Dynamic range compression: softknee
+    %
     for softknee_idx = 1:length(SNR) % size(RDmap_input_raw_softknee, 1)
-        RD_map_softknee(:, :, softknee_idx) = reshape(RDmap_input_raw_softknee(softknee_idx, :), [N, M]); % Dynamic range compression: softknee
+        RD_map_softknee(:, :, softknee_idx) = reshape(RDmap_input_raw_softknee(softknee_idx, :), [N, M]);
     end
+    % 
+    % Dynamic range compression: log
+    % 
     for log_idx = 1:length(SNR) % size(RDmap_input_raw_log, 1)
-        RD_map_log(:, :, log_idx) = reshape(RDmap_input_raw_log(log_idx, :), [N, M]); % Dynamic range compression: log
+        RD_map_log(:, :, log_idx) = reshape(RDmap_input_raw_log(log_idx, :), [N, M]); 
     end
     
     % SNR = 6;
     % CNR = 15;
     % H = 4;
-
+    
     % 
     % para.mat 檔案 存有 H SNR N M 的資料 從 RD_map_dataset.m / RD_map_dataset_clutter.m 產生
     % 但會覆寫掉上面 H SNR 設定 且 RD_map_dataset.m / RD_map_dataset_clutter.m 的 SNR 設定是像
@@ -329,10 +335,9 @@ for iter = 1:max_iter
     %
     % 寫入檔案路徑(用"a"時, 如果文字中已經存在資料, 不會清空資料, 而是在資料之後寫入, 而"w"會清空原本的資料, 重新寫入)
     fid = fopen(['.\','2007_train.txt'], 'a');
-    % fid = fopen(['D:\YU\my_yolo3\','2007_val.txt'],'a');
+    % fid = fopen(['.\','2007_val.txt'],'a');
     %
-    % 沒有 RD_map_label 的資料
-    % size(RD_map_label) = [N M length(SNR], e.g. 
+    % size(RD_map_label) = [N M length(SNR)], e.g. [16 16 1]
     for i = 1:length(SNR) % size(RD_map_label, 3)
         [nn, mm] = find(RD_map_label(:, :, i) == 1); % target的位置
         for H_idx = 1:H
@@ -342,14 +347,14 @@ for iter = 1:max_iter
             % 右下點 (xmax, ymax)
             xmax(H_idx) = mm(H_idx) + 1; % 
             ymax(H_idx) = nn(H_idx) + 1; % 
-
+            % 
             fprintf('(xmin, ymin), (xmax, ymax) = (%d, %d), (%d, %d)\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx));
         end
         fprintf(fid,'.\\train_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, iter, xmin(1), ymin(1), xmax(1), ymax(1));
-        % fprintf(fid,'.\\validation_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1));
+        % fprintf(fid,'.\\valid_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, iter, xmin(1), ymin(1), xmax(1), ymax(1));
     end
     fclose(fid);
-
+    
     %
     % RD_map
     %
@@ -376,9 +381,11 @@ for iter = 1:max_iter
     % 
     % figure(5) % Dynamic range compression
     see5 = reshape(RDmap_input_raw_softknee(1, :), N, M);
-    % mesh(see5,'edgecolor','r');
+    temp = mesh(see5,'edgecolor','r');
+    temp_filename = ['.\',num2str(iter),'_ref','.jpeg'];
+    saveas(gcf, temp_filename, 'jpeg');
     % title('Dynamic range compression');
-%     figure(iter)
+    % figure(iter)
     imagesc(see5);
     
     set(gca,'XTick',[]) % Remove the ticks in the x axis
@@ -396,6 +403,7 @@ for iter = 1:max_iter
     
     % train_H%d_SNR%d_f%d.mat
     file_name = ['..\VOC2007\JPEGImages\train_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(iter),'.mat'];
-    save(file_name,'RD_map_softknee'); % for YOLO-CFAR input
+    save(file_name, 'RD_map_softknee'); % for YOLO-CFAR input
 end
+
 
