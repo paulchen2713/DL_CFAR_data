@@ -2,100 +2,113 @@
 % RD_map_dataset main program
 %   patch. June 22, 2022
 %          July 02, 2022
+%          July 11, 2022
 %
 clear;
 clc;
 %
 % parameter_setting_record = [range1; range2; Vdop1; Vdop2];
 % 
-% RDmap_signal
-% RDmap_noise
+% RDmap_signal, RDmap_noise
 %
 % Simulation settings
 % 
 TotalSimulationTime = 1; % number of RD maps
 CarrierFreq = 78*10^9;   % carrier frequency 78 GHz
-H = 1;                   % number of targets
-SNR = 0:5:10;            % dB (need to -30)
-% SNR = 6;                 % dB (plus 24dB 16*16, 30dB 32*32, 32dB 40*40)
+H = 1;                   % number of targets        但只能設1個target !?
+SNR = 0:2:10;            % dB (need to -30)??  0:5:10
+% SNR = 6;                 % dB (plus 24dB 16*16, 30dB 32*32, 32dB 40*40)   6dB? 單位很奇怪
 %
-% MIMO parameter settings
+% MIMO parameter settings 
 %
-numTx = 1;
-numRx = 1;
+% numTx = 1;
+% numRx = 1;
 % 
 % Frame-related parameters
 % 
 % RD map with size = N*M
 N = 16;       % number of subcarrier
 M = 16;       % number of OFDM symbol
-Nfft  = N;    % number of FFT points in frequency domain
-frame = 1;    % number of frame used
-Mfft  = M;    % number of FFT points in time domain
+% Nfft  = N;    % number of FFT points in frequency domain
+% frame = 1;    % number of frame used
+% Mfft  = M;    % number of FFT points in time domain
 %
 % OFDM-related parameters
 %
 BW = 1*10^9;
 SubcarrierSpacing = BW/N;
 PeriodOFDMsymbol = 1/SubcarrierSpacing;
-CP = 49*PeriodOFDMsymbol;
+CP = 49*PeriodOFDMsymbol; % 49?? CP?? 
 PeriodOFDMsymbol_whole = PeriodOFDMsymbol + CP;
-PeriodFrame = PeriodOFDMsymbol_whole * M;
+PeriodFrame = PeriodOFDMsymbol_whole * M;       % unused
 % 
 % Common parameter definition
 % 
-c = 3*10^8;    % speed of light
-FreqDopp = @(RelVelocity) 2*RelVelocity*CarrierFreq/c; % Doppler shift function
-RoundTripTime = @(d) 2*d/c;                            % Round Trip Time (RTT) function
+c = physconst('LightSpeed');                          % speed of light == 299792458 ~ 3*10^8 m/s
+FreqDopp = @(RelVelocity)2*RelVelocity*CarrierFreq/c; % Doppler shift function
+RoundTripTime = @(d)2*d/c;                            % Round Trip Time (RTT) function
 %
 % Specifications
 %
-d_unamb = c/2/SubcarrierSpacing;                       % unambiguity range
-v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguity velocity
-d_rel = d_unamb/N; % search resolution of range
-v_rel = v_unamb/M; % search resolution of velocity
+d_unamb = c/2/SubcarrierSpacing;                       % unambiguous range is the maximum range at which a target can be located
+v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguous velocity
+% d_resol = d_unamb/N;                                   % search resolution of range
+% v_resol = v_unamb/M;                                   % search resolution of velocity
 % 
 % Data matrix construction
 %
-for g = 1: length(SNR)
+for g = 1:length(SNR)
     SNR_g = SNR(g);
     % 
     % target range setting
     % 
-    RDmap_signal = cell(TotalSimulationTime,1); % 產生空細胞陣列
-    RDmap_noise = cell(TotalSimulationTime,1);
-    parameter_setting_record = [];
+    % cell(), called cell array, is a data type with indexed data containers called cells
+    % 
+    % initialize RDmap_signal and RDmap_noise as empty TotalSimulationTime-by-1 cell arrays
+    RDmap_signal = cell(TotalSimulationTime, 1); % cell(1, 1) = 1×1 cell array {0×0 double}
+    RDmap_noise  = cell(TotalSimulationTime, 1); 
+    % parameter_setting_record = [];
     for TimeIndex = 1:TotalSimulationTime
         %
-        tempMap = zeros(N,M);
-        tempMap(1,1) = 1;
-        while sum(tempMap(1,:))>0 || sum(tempMap(N,:))>0 || sum(tempMap(:,1))>0 || sum(tempMap(:,M))>0 || sum(sum(tempMap))<H
-            fprintf('%d\n', sum(tempMap(1,:)~=0)>0 || sum(tempMap(N,:)~=0)>0 || sum(tempMap(:,1)~=0)>0 || sum(tempMap(:,M)~=0)>0);   
+        tempMap = zeros(N, M); 
+        tempMap(1, 1) = 1;     % why initialize first element in tempMap as 1?
+        % 
+        % 如果 tempMap的第1個或第N個row 的元素和大於0 或是 tempMap的第1個或第N個column 的元素和大於0 
+        % 或是 tempMap的總元素和小於 目標數H 任一條件滿足就跳出迴圈, sum(A) returns the sum of the elements
+        while sum(tempMap(1, :)) > 0 || sum(tempMap(N, :)) > 0 || sum(tempMap(:, 1)) > 0 || sum(tempMap(:, M)) > 0 || sum(sum(tempMap)) < H
+            % fprintf('%d\n', sum(tempMap(1,:)~=0)>0 || sum(tempMap(N,:)~=0)>0 || sum(tempMap(:,1)~=0)>0 || sum(tempMap(:,M)~=0)>0);   
+            % 
+            Range = zeros(H, 1);
+            Vdop  = zeros(H, 1);
+            % DoA   = zeros(H, 1);
+            %
             for h = 1:H
-                Range(h,1) = rand*d_unamb;
+                % 都卜勒距離 = 隨機值 * 絕對距離, rand ~ U(0, 1)
+                Range(h, 1) = rand * d_unamb;
             end
             % 
             % target Doppler velocity setting
             % 
             for h = 1:H
-                Vdop(h,1) = (2*rand-1)*v_unamb;
+                % 都卜勒速度 = (2*隨機值 - 1) * 絕對速度
+                Vdop(h, 1) = (2*rand - 1) * v_unamb;
             end
             % 
             % target DoA setting
             % 
-            for h = 1:H
-                DoA(h,1) = (2*rand-1)*60; % FOV = 120 degrees
-            end
-            parameter_setting_record = [parameter_setting_record [Range; Vdop]]; 
+            % for h = 1:H
+            %     DoA(h, 1) = (2*rand - 1)*60; % FOV = 120 degrees 
+            % end
+            % parameter_setting_record = [parameter_setting_record [Range; Vdop]]; 
             % 
             % transmitted signal (QPSK symbols)
             % 
-            F_Tx = qammod(round(rand(N,M)*4+0.5,0)-1,4)/sqrt(2);  
+            F_Tx = qammod(round(rand(N, M)*4 + 0.5, 0) - 1, 4) / sqrt(2);  
             % 
             % channel effect
             % 
-            F_Channel = cell(H,1);
-            tempMap = zeros(N,M);
+            F_Channel = cell(H, 1);
+            tempMap   = zeros(N, M); % 清空tempMap 
             target_Map(:,:,TimeIndex) = zeros(N,M); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
             for index_target = 1:H
                 % unpredictable phase difference between sources
@@ -103,21 +116,21 @@ for g = 1: length(SNR)
                 range    = exp(-1j*2*pi*RoundTripTime(Range(index_target))*SubcarrierSpacing*[1:N].');
                 doppler  = exp(1j*2*pi*PeriodOFDMsymbol_whole*FreqDopp(Vdop(index_target))*[1:M]);
                 %
-                F_Channel{index_target} =  F_Tx.*(range*doppler)*exp(1j*NuiPhase);
+                F_Channel{index_target} =  F_Tx .* (range*doppler)*exp(1j*NuiPhase);
                 RD_map_single_pure_target = abs(fft2(F_Channel{index_target}./F_Tx,N,M)); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
                 % 
                 [nn, mm] = find(RD_map_single_pure_target == max(max(RD_map_single_pure_target)));
                 tempMap(nn, mm) = 1; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-            end       
-        end
-        target_Map(:,:,TimeIndex) = tempMap; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+            end
+        end % end while, 代表 tempMap 有不為零的elemennt, 所以assign給target必不為0
+        target_Map(:, :, TimeIndex) = tempMap; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
         % 
         % received signal
         % 
-        F_Rx = cell(1,1);
-        F_Rx_phase = cell(1,1);
-        F_Rx = zeros(N,M);        
-        P_noise = 0.5;
+        % F_Rx = cell(1,1);
+        % F_Rx_phase = cell(1,1);
+        F_Rx = zeros(N, M);        
+        P_noise = 0.5;      % unint?
         P_signal = P_noise*(10^(SNR_g/10));
         for index_target = 1:H
             F_Rx = F_Rx + sqrt(P_signal/2)*F_Channel{index_target};
@@ -126,7 +139,7 @@ for g = 1: length(SNR)
         % add sptially white noise
         % 
         P_Rx = mean(mean(F_Rx.*conj(F_Rx)));
-        Z = sqrt(P_noise/2)*(randn(N,M)+1j*randn(N,M));
+        Z = sqrt(P_noise/2)*(randn(N, M) + 1j*randn(N, M));
         F_Rx_n = F_Rx + Z;
         F_Rx_phase  = F_Rx_n./F_Tx;
         Z_processed = Z./F_Tx;
@@ -138,6 +151,7 @@ for g = 1: length(SNR)
     % 
     % vectorization
     % 
+    
     for TimeIndex = 1:TotalSimulationTime
         RDmap_input_noclutter(TimeIndex+(g-1)*TotalSimulationTime,1:N*M) = reshape(abs(RDmap_full_noclutter{TimeIndex}),1,N*M);
         RDmap_label(TimeIndex+(g-1)*TotalSimulationTime,1:N*M) = reshape(abs(RDmap_noise{TimeIndex}),1,N*M); % noise
@@ -145,7 +159,7 @@ for g = 1: length(SNR)
     end
 end
 %
-% truncated (optional)
+% truncated (not optional)
 %
 truncated_threshold = 10;
 for i = 1 :  length(SNR)*TotalSimulationTime
@@ -157,8 +171,10 @@ end
 %
 % reshape N*M
 %
-for ii = 1:size(RDmap_label_true_target,1)
-    RD_map_label(:,:,ii) = reshape(RDmap_label_true_target(ii,:), [N,M]); % 只有target
+RD_map_label = zeros(N, M, 3);
+for ii = 1:size(RDmap_label_true_target, 1)
+    % 
+    RD_map_label(:,:,ii) = reshape(RDmap_label_true_target(ii,:), [N, M]); % 只有target
 end
 for ii = 1:size(RDmap_input_raw_noclutter,1) % size(A,1):A有幾列 = 模擬次數
     RD_map_noclutter(:,:,ii) = reshape(RDmap_input_raw_noclutter(ii, :), [N,M]); % target+noise
@@ -176,9 +192,11 @@ for jj = 1:size(RDmap_input_raw_noclutter,1)
         RD_map_noclutter_max(nmax(h,jj),mmax(h,jj),jj)=1;
     end   
     [nmaxx(:,jj),mmaxx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
-    [tn(:,jj),tm(:,jj)] = find(RD_map_label(:,:,jj)==1);
+    [tn(:,jj), tm(:,jj)] = find(RD_map_label(:,:,jj)==1);
     if sum(abs(nmaxx(:,jj)-tn(:,jj))==1)>0 || sum(abs(mmaxx(:,jj)-tm(:,jj))==1)>0
-        [rdmap,label]=newrdmap2(H,SNR);
+        % newrdmap2 for single-target?
+        % newrdmap3 for multi-target? nope
+        [rdmap,label] = newrdmap2(H,SNR); 
         temp_rd=RD_map_noclutter(:,:,jj);
         RD_map_noclutter(:,:,jj)=rdmap;
         temp_la=RD_map_label(:,:,jj);
@@ -187,57 +205,58 @@ for jj = 1:size(RDmap_input_raw_noclutter,1)
     end     
 end
 % 
+
 % % % % % 
-nmax=zeros(H,size(RDmap_input_raw_noclutter,1));
-mmax=zeros(H,size(RDmap_input_raw_noclutter,1));
-RD_map_noclutter_2=RD_map_noclutter;
-RD_map_noclutter_max=zeros(N,M,TotalSimulationTime);
-for jj = 1:size(RDmap_input_raw_noclutter,1)
-    for h = 1:H
-        [nmax(h,jj),mmax(h,jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
-        RD_map_noclutter_2(nmax(h,jj),mmax(h,jj),jj) = 0;
-        RD_map_noclutter_max(nmax(h,jj),mmax(h,jj),jj)=1;
-    end   
-    [nmaxx(:,jj),mmaxx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
-    [tn(:,jj),tm(:,jj)] = find(RD_map_label(:,:,jj)==1);
-    if sum(abs(nmaxx(:,jj)-tn(:,jj))==1)>0 || sum(abs(mmaxx(:,jj)-tm(:,jj))==1)>0      
-        fprintf('p%d,',jj)
-    end   
-end 
+% nmax=zeros(H,size(RDmap_input_raw_noclutter,1));
+% mmax=zeros(H,size(RDmap_input_raw_noclutter,1));
+% RD_map_noclutter_2=RD_map_noclutter;
+% RD_map_noclutter_max=zeros(N,M,TotalSimulationTime);
+% for jj = 1:size(RDmap_input_raw_noclutter,1)
+%     for h = 1:H
+%         [nmax(h,jj),mmax(h,jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
+%         RD_map_noclutter_2(nmax(h,jj),mmax(h,jj),jj) = 0;
+%         RD_map_noclutter_max(nmax(h,jj),mmax(h,jj),jj)=1;
+%     end   
+%     [nmaxx(:,jj),mmaxx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
+%     [tn(:,jj),tm(:,jj)] = find(RD_map_label(:,:,jj)==1);
+%     if sum(abs(nmaxx(:,jj)-tn(:,jj))==1)>0 || sum(abs(mmaxx(:,jj)-tm(:,jj))==1)>0      
+%         fprintf('p%d,',jj)
+%     end   
+% end 
 % % % % % 
 
 % % % % % 
-for ii = 1:size(RDmap_input_raw_noclutter,1)
-    [nmax(ii), mmax(ii)] = find(RD_map_noclutter(:,:,ii) == max(max(RD_map_noclutter(:,:,ii))));
-    [tn(ii), tm(ii)] = find(RD_map_label(:,:,ii)==1);
-    if nmax(ii) ~= tn(ii) || mmax(ii) ~= tm(ii)
-        fprintf('0\n')
-    else
-        fprintf('3\n')
-    end
-end
+% for ii = 1:size(RDmap_input_raw_noclutter,1)
+%     [nmax(ii), mmax(ii)] = find(RD_map_noclutter(:,:,ii) == max(max(RD_map_noclutter(:,:,ii))));
+%     [tn(ii), tm(ii)] = find(RD_map_label(:,:,ii)==1);
+%     if nmax(ii) ~= tn(ii) || mmax(ii) ~= tm(ii)
+%         fprintf('0\n')
+%     else
+%         fprintf('3\n')
+%     end
+% end
 % % % % % 
 
 %
 % truncated (optional)
 %
-truncated_threshold = 10;
-for iii = 1 : TotalSimulationTime
-    RD_map_truncated(:,:,iii) = RD_map_noclutter(:,:,iii);
-    [xx,yy]=find(RD_map_noclutter(:,:,iii)>=truncated_threshold);
-    for xxx = 1:length(xx)
-        RD_map_truncated(xx(xxx),yy(xxx),iii) = truncated_threshold;
-    end
-end
+% truncated_threshold = 10;
+% for iii = 1 : TotalSimulationTime
+%     RD_map_truncated(:,:,iii) = RD_map_noclutter(:,:,iii);
+%     [xx,yy]=find(RD_map_noclutter(:,:,iii)>=truncated_threshold);
+%     for xxx = 1:length(xx)
+%         RD_map_truncated(xx(xxx),yy(xxx),iii) = truncated_threshold;
+%     end
+% end
 %
 % Normalize 0~1
 %
 % % % % % 
-for ii = 1:size(RD_map_noclutter,3) % 模擬次數
-    max_val=max(max(RD_map_noclutter(:,:,ii)));
-    min_val=min(min(RD_map_noclutter(:,:,ii)));
-    RD_map_normal(:,:,ii)=(RD_map_noclutter(:,:,ii)-min_val)/(max_val-min_val);
-end   
+% for ii = 1:size(RD_map_noclutter,3) % 模擬次數
+%     max_val=max(max(RD_map_noclutter(:,:,ii)));
+%     min_val=min(min(RD_map_noclutter(:,:,ii)));
+%     RD_map_normal(:,:,ii)=(RD_map_noclutter(:,:,ii)-min_val)/(max_val-min_val);
+% end   
 % % % % % 
 
 %
@@ -269,6 +288,8 @@ for i = 1 : TotalSimulationTime
     end
 end
 % 
+% RD_map_softknee = zeros(16, 16, 3);
+% RD_map_log = zeros(16, 16, 3);
 for ii = 1:size(RDmap_input_raw_softknee,1)
     RD_map_softknee(:,:,ii) = reshape(RDmap_input_raw_softknee(ii,:),[N,M]); % Dynamic range compression: softknee
 end
@@ -299,10 +320,10 @@ end
 % mesh(see4,'edgecolor','r');
 % title('Truncated')
 % 
-figure(5) % Dynamic range compression
-see5 = reshape(RDmap_input_raw_softknee(1,:),N,M);
-mesh(see5,'edgecolor','r');
-title('Dynamic range compression')
+% figure(5) % Dynamic range compression
+see5 = reshape(RDmap_input_raw_softknee(1, :), N, M);
+% mesh(see5,'edgecolor','r');
+% title('Dynamic range compression');
 figure(11)
 imagesc(see5);
 % 
@@ -315,6 +336,7 @@ imagesc(see5);
 % see7 = RD_map_normal(:,:,1);
 % mesh(see7,'edgecolor','r');
 % title('Normalize')
+
 %
 % validation
 %
@@ -337,18 +359,18 @@ imagesc(see5);
 %   "VOC2007/JPEGImages", "YOLO_label" stores training inputs and labels for YOLO_CFAR
 %   notes that YOLO_input should store in \VOC2007\JPEGImages for convenient
 % 
-save(['.\CFAR_data\CFAR_train_noT_noclutter_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_noclutter'); % for CFAR
-save(['.\DL_input\DL_input_train_noT_truncated_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RDmap_input_raw_truncated'); % for DL-CFAR input
-save(['.\DL_label\DL_label_train_noT_label_noise_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RDmap_label_raw'); % for DL-CFAR label(target)
-
-for jj = 1:size(RD_map_softknee,3)
-    % fileName = ['D:\BeginnerMatlabProjects\RDMap\VOC2007\JPEGImages\training_noT_softknee_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(jj),'.mat'];
-    fileName = ['.\VOC2007\JPEGImages\YOLO_input_train_noT_softknee_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(jj),'.mat'];
-    RD_map_yoloinput = RD_map_softknee(:,:,jj);
-    save(fileName,'RD_map_yoloinput'); % for YOLO-CFAR input
-end
-% save(['training_noT_label_target_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_label'); % for YOLO-CFAR label(target)
-save(['.\YOLO_label\YOLO_label_train_noT_label_target_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_label');
+% save(['.\CFAR_data\CFAR_train_noT_noclutter_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_noclutter'); % for CFAR
+% save(['.\DL_input\DL_input_train_noT_truncated_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RDmap_input_raw_truncated'); % for DL-CFAR input
+% save(['.\DL_label\DL_label_train_noT_label_noise_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RDmap_label_raw'); % for DL-CFAR label(target)
+% 
+% for jj = 1:size(RD_map_softknee,3)
+%     % % fileName = ['D:\BeginnerMatlabProjects\RDMap\VOC2007\JPEGImages\training_noT_softknee_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(jj),'.mat'];
+%     fileName = ['.\VOC2007\JPEGImages\YOLO_input_train_noT_softknee_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(jj),'.mat'];
+%     RD_map_yoloinput = RD_map_softknee(:,:,jj);
+%     save(fileName,'RD_map_yoloinput'); % for YOLO-CFAR input
+% end
+% % % save(['training_noT_label_target_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_label'); % for YOLO-CFAR label(target)
+% save(['.\YOLO_label\YOLO_label_train_noT_label_target_H',num2str(H),'_SNR',num2str(SNR),'.mat'],'RD_map_label');
 
 %
 % testing
