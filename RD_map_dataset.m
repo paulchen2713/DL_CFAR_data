@@ -13,8 +13,8 @@ clc;
 %
 % Simulation settings
 % 
-% Note. 如果改 TotalSimulationTime 次數 newrdmap2/3.m function內的TotalSimulationTime參數也要改
-% 但為什麼不當參數傳進去 或直接固定為1 ??
+% Note. 如果改 TotalSimulationTime 的參數 則 newrdmap2 / newrdmap3 function 
+% 內的 TotalSimulationTime 參數也要跟著改但為什麼不當參數傳進去 或直接固定為1 ??
 TotalSimulationTime = 1; % number of RD maps          但只能設為1 
 CarrierFreq = 78*10^9;   % carrier frequency 78 GHz   
 H = 1;                   % number of targets          但只能設1個target
