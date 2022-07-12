@@ -13,10 +13,12 @@ clc;
 %
 % Simulation settings
 % 
-TotalSimulationTime = 1; % number of RD maps
-CarrierFreq = 78*10^9;   % carrier frequency 78 GHz
-H = 1;                   % number of targets        但只能設1個target !?
-SNR = 0:2:10;            % dB (need to -30)??  0:5:10
+% Note. 如果改 TotalSimulationTime 次數 newrdmap2/3.m function內的TotalSimulationTime參數也要改
+% 但為什麼不當參數傳進去 或直接固定為1 ??
+TotalSimulationTime = 1; % number of RD maps          但只能設為1 
+CarrierFreq = 78*10^9;   % carrier frequency 78 GHz   
+H = 1;                   % number of targets          但只能設1個target
+SNR = 0:2:10;            % dB (need to -30)??  0:5:10 
 % SNR = 6;                 % dB (plus 24dB 16*16, 30dB 32*32, 32dB 40*40)   6dB? 單位很奇怪
 %
 % MIMO parameter settings 
@@ -57,8 +59,9 @@ v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguous velocity
 % 
 % Data matrix construction
 %
-for g = 1:length(SNR)
-    SNR_g = SNR(g);
+for SNR_idx = 1:length(SNR)
+    fprintf('iter#%d\n', SNR_idx);
+    SNR_cur = SNR(SNR_idx);
     % 
     % target range setting
     % 
@@ -66,9 +69,17 @@ for g = 1:length(SNR)
     % 
     % initialize RDmap_signal and RDmap_noise as empty TotalSimulationTime-by-1 cell arrays
     RDmap_signal = cell(TotalSimulationTime, 1); % cell(1, 1) = 1×1 cell array {0×0 double}
-    RDmap_noise  = cell(TotalSimulationTime, 1); 
+    RDmap_noise  = cell(TotalSimulationTime, 1);
+    % fprintf('size(RDmap_signal) = [%d %d]\n', size(RDmap_signal)); % [1 1]
+    % fprintf('size(RDmap_noise) = [%d %d]\n', size(RDmap_noise));   % [1 1]
     % parameter_setting_record = [];
-    for TimeIndex = 1:TotalSimulationTime
+    %
+    target_Map = zeros(N, M, TotalSimulationTime);
+    % fprintf('size(target_Map) = [%d %d]\n', size(target_Map)); % [16 16]
+    %
+    F_Tx = 0; % transmitted signal (QPSK symbols)
+    %
+    for time_index = 1:TotalSimulationTime
         %
         tempMap = zeros(N, M); 
         tempMap(1, 1) = 1;     % why initialize first element in tempMap as 1?
@@ -100,6 +111,7 @@ for g = 1:length(SNR)
             %     DoA(h, 1) = (2*rand - 1)*60; % FOV = 120 degrees 
             % end
             % parameter_setting_record = [parameter_setting_record [Range; Vdop]]; 
+            
             % 
             % transmitted signal (QPSK symbols)
             % 
@@ -109,7 +121,7 @@ for g = 1:length(SNR)
             % 
             F_Channel = cell(H, 1);
             tempMap   = zeros(N, M); % 清空tempMap 
-            target_Map(:,:,TimeIndex) = zeros(N,M); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+            target_Map(:, :, time_index) = zeros(N, M); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
             for index_target = 1:H
                 % unpredictable phase difference between sources
                 NuiPhase = rand*2*pi;
@@ -117,90 +129,122 @@ for g = 1:length(SNR)
                 doppler  = exp(1j*2*pi*PeriodOFDMsymbol_whole*FreqDopp(Vdop(index_target))*[1:M]);
                 %
                 F_Channel{index_target} =  F_Tx .* (range*doppler)*exp(1j*NuiPhase);
-                RD_map_single_pure_target = abs(fft2(F_Channel{index_target}./F_Tx,N,M)); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+                RD_map_single_pure_target = abs(fft2(F_Channel{index_target}./F_Tx, N, M)); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
                 % 
                 [nn, mm] = find(RD_map_single_pure_target == max(max(RD_map_single_pure_target)));
                 tempMap(nn, mm) = 1; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
             end
         end % end while, 代表 tempMap 有不為零的elemennt, 所以assign給target必不為0
-        target_Map(:, :, TimeIndex) = tempMap; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+        target_Map(:, :, time_index) = tempMap; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+        % fprintf('size(target_Map) = [%d %d]\n', size(target_Map)); % [16 16]
         % 
         % received signal
         % 
         % F_Rx = cell(1,1);
         % F_Rx_phase = cell(1,1);
         F_Rx = zeros(N, M);        
-        P_noise = 0.5;      % unint?
-        P_signal = P_noise*(10^(SNR_g/10));
+        P_noise = 0.5;                        % unint?
+        P_signal = P_noise*(10^(SNR_cur/10)); % unint?
         for index_target = 1:H
             F_Rx = F_Rx + sqrt(P_signal/2)*F_Channel{index_target};
         end
         % 
         % add sptially white noise
         % 
-        P_Rx = mean(mean(F_Rx.*conj(F_Rx)));
+        fprintf('-----add sptially white noise-----\n');
+        % P_Rx = mean(mean(F_Rx.*conj(F_Rx)));
         Z = sqrt(P_noise/2)*(randn(N, M) + 1j*randn(N, M));
-        F_Rx_n = F_Rx + Z;
-        F_Rx_phase  = F_Rx_n./F_Tx;
+        % F_Rx_n = F_Rx + Z;
+        % F_Rx_phase  = F_Rx_n./F_Tx;
         Z_processed = Z./F_Tx;
-        F_Rx_phase_signal_only  = F_Rx./F_Tx;
-        RDmap_signal{TimeIndex} = fft2(F_Rx_phase_signal_only,N,M)/sqrt(N)/sqrt(M);
-        RDmap_noise{TimeIndex}  = fft2(Z_processed,N,M)/sqrt(N)/sqrt(M);
-        RDmap_full_noclutter{TimeIndex} = RDmap_signal{TimeIndex} + RDmap_noise{TimeIndex};
+        F_Rx_phase_signal_only  = F_Rx./F_Tx; % [16 16]
+        fprintf('size(Z_processed) = [%d %d]\n', size(Z_processed));
+        fprintf('size(F_Rx_phase_signal_only) = [%d %d]\n', size(F_Rx_phase_signal_only));
+        %
+        RDmap_signal{time_index} = fft2(F_Rx_phase_signal_only, N, M) / sqrt(N) / sqrt(M);
+        RDmap_noise{time_index}  = fft2(Z_processed, N, M)/sqrt(N)/sqrt(M);
+        RDmap_full_noclutter{time_index} = RDmap_signal{time_index} + RDmap_noise{time_index};
     end
     % 
     % vectorization
     % 
     
-    for TimeIndex = 1:TotalSimulationTime
-        RDmap_input_noclutter(TimeIndex+(g-1)*TotalSimulationTime,1:N*M) = reshape(abs(RDmap_full_noclutter{TimeIndex}),1,N*M);
-        RDmap_label(TimeIndex+(g-1)*TotalSimulationTime,1:N*M) = reshape(abs(RDmap_noise{TimeIndex}),1,N*M); % noise
-        RDmap_label_true_target(TimeIndex+(g-1)*TotalSimulationTime,1:N*M) = reshape(target_Map(:,:,TimeIndex),1,N*M); % target
+    for time_index = 1:TotalSimulationTime
+        RDmap_input_noclutter(time_index+(SNR_idx-1)*TotalSimulationTime,1:N*M) = reshape(abs(RDmap_full_noclutter{time_index}), 1, N*M);
+        RDmap_label(time_index+(SNR_idx-1)*TotalSimulationTime,1:N*M) = reshape(abs(RDmap_noise{time_index}), 1, N*M); % noise
+        RDmap_label_true_target(time_index+(SNR_idx-1)*TotalSimulationTime,1:N*M) = reshape(target_Map(:,:,time_index), 1, N*M); % target
     end
 end
 %
 % truncated (not optional)
 %
-truncated_threshold = 10;
-for i = 1 :  length(SNR)*TotalSimulationTime
-    RDmap_input_raw_noclutter(i,:) = RDmap_input_noclutter(i,:).^2;
-    RDmap_label_raw(i,:) = RDmap_label(i,:).^2;
+fprintf('\n-----truncated (not optional)-----\n');
+truncated_threshold = 10; % unit?
+total_iteration = length(SNR)*TotalSimulationTime;
+fprintf('truncated total_iteration = %d\n', total_iteration);
+%
+RDmap_input_raw_noclutter = zeros(length(SNR), N*M); % [6 256]
+RDmap_label_raw = zeros(length(SNR), N*M);           % [6 256]
+RDmap_input_raw_truncated = zeros(length(SNR), N*M); % [6 256]
+% 
+for i = 1:total_iteration
+    RDmap_input_raw_noclutter(i, :) = RDmap_input_noclutter(i, :).^2;
+    RDmap_label_raw(i, :) = RDmap_label(i, :).^2;
     RDmap_input_raw_truncated(i,:) = RDmap_input_raw_noclutter(i, :);
     RDmap_input_raw_truncated(i, find(RDmap_input_raw_noclutter(i, :) >= truncated_threshold)) = truncated_threshold;
 end
+fprintf('size(RDmap_input_raw_noclutter) = [%d %d]\n', size(RDmap_input_raw_noclutter));
+fprintf('size(RDmap_label_raw) = [%d %d]\n', size(RDmap_label_raw));
+fprintf('size(RDmap_input_raw_truncated) = [%d %d]\n', size(RDmap_input_raw_truncated));
 %
 % reshape N*M
 %
-RD_map_label = zeros(N, M, 3);
-for ii = 1:size(RDmap_label_true_target, 1)
-    % 
-    RD_map_label(:,:,ii) = reshape(RDmap_label_true_target(ii,:), [N, M]); % 只有target
+fprintf('\n-----reshape N*M-----\n');
+RD_map_label = zeros(N, M, length(SNR));     % [16 16 6]
+RD_map_noclutter = zeros(N, M, length(SNR)); % [16 16 6]
+for label_idx = 1:size(RDmap_label_true_target, 1) 
+    RD_map_label(:,:,label_idx) = reshape(RDmap_label_true_target(label_idx,:), [N, M]); % 只有target
 end
-for ii = 1:size(RDmap_input_raw_noclutter,1) % size(A,1):A有幾列 = 模擬次數
-    RD_map_noclutter(:,:,ii) = reshape(RDmap_input_raw_noclutter(ii, :), [N,M]); % target+noise
+fprintf('size(RD_map_label) = [%d %d %d]\n', size(RD_map_label));
+% size(A, 1): A有幾列 = 模擬次數
+for noclutter_idx = 1:size(RDmap_input_raw_noclutter,1)
+    RD_map_noclutter(:, :, noclutter_idx) = reshape(RDmap_input_raw_noclutter(noclutter_idx, :), [N, M]); % target + noise
 end
+fprintf('size(RD_map_noclutter) = [%d %d %d]\n', size(RD_map_noclutter));
 %
 % 
-nmax=zeros(H,size(RDmap_input_raw_noclutter,1));
-mmax=zeros(H,size(RDmap_input_raw_noclutter,1));
-RD_map_noclutter_2=RD_map_noclutter;
-RD_map_noclutter_max=zeros(N,M,TotalSimulationTime);
-for jj = 1:size(RDmap_input_raw_noclutter,1)
+n_max = zeros(H, size(RDmap_input_raw_noclutter, 1));
+m_max = zeros(H, size(RDmap_input_raw_noclutter, 1));
+RD_map_noclutter_2 = RD_map_noclutter;
+RD_map_noclutter_max = zeros(N, M, TotalSimulationTime);
+%
+n_max_idx = zeros(TotalSimulationTime, length(SNR));
+m_max_idx = zeros(TotalSimulationTime, length(SNR));
+n_true = zeros(TotalSimulationTime, length(SNR));
+m_true = zeros(TotalSimulationTime, length(SNR));
+%
+for jj = 1:size(RDmap_input_raw_noclutter, 1)
     for h = 1:H
-        [nmax(h,jj),mmax(h,jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
-        RD_map_noclutter_2(nmax(h,jj),mmax(h,jj),jj) = 0;
-        RD_map_noclutter_max(nmax(h,jj),mmax(h,jj),jj)=1;
-    end   
-    [nmaxx(:,jj),mmaxx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
-    [tn(:,jj), tm(:,jj)] = find(RD_map_label(:,:,jj)==1);
-    if sum(abs(nmaxx(:,jj)-tn(:,jj))==1)>0 || sum(abs(mmaxx(:,jj)-tm(:,jj))==1)>0
+        [n_max(h, jj), m_max(h, jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
+        RD_map_noclutter_2(n_max(h, jj), m_max(h,jj), jj) = 0;
+        RD_map_noclutter_max(n_max(h, jj), m_max(h, jj), jj) = 1;
+    end
+    %
+    [n_max_idx(:, jj), m_max_idx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
+    [n_true(:, jj), m_true(:, jj)] = find(RD_map_label(:,:,jj)==1);
+    %
+    if sum(abs(n_max_idx(:, jj) - n_true(:, jj)) == 1) > 0 || sum(abs(m_max_idx(:,jj) - m_true(:,jj)) == 1) > 0
         % newrdmap2 for single-target?
         % newrdmap3 for multi-target? nope
-        [rdmap,label] = newrdmap2(H,SNR); 
+        [rdmap, label] = newrdmap2(H, SNR); 
         temp_rd=RD_map_noclutter(:,:,jj);
-        RD_map_noclutter(:,:,jj)=rdmap;
-        temp_la=RD_map_label(:,:,jj);
-        RD_map_label(:,:,jj)=label;
+        %
+        % Occasional Error. Unable to perform assignment because the size of the 
+        % left side is 16-by-16 and the size of the right side is 16-by-16-by-6 ???
+        %
+        RD_map_noclutter(:, :, jj) = rdmap; % % % 有時候會有error % % %
+        % temp_la = RD_map_label(:,:,jj);
+        RD_map_label(:, :, jj) = label;
         fprintf('%d,',jj)
     end     
 end
@@ -248,6 +292,7 @@ end
 %         RD_map_truncated(xx(xxx),yy(xxx),iii) = truncated_threshold;
 %     end
 % end
+
 %
 % Normalize 0~1
 %
@@ -262,34 +307,44 @@ end
 %
 % Dynamic Range Compression (DRC)
 %
-for ii = 1:size(RD_map_noclutter,3) % 模擬次數
-    RDmap_input_raw_noclutter2(ii,:) = reshape(RD_map_noclutter(:,:,ii),[],N*M);
+RDmap_input_raw_noclutter2 = zeros(1, N*M); % [1 256] 
+for ii = 1:length(SNR) % i = 1:size(RD_map_noclutter, 3) 模擬次數  
+    RDmap_input_raw_noclutter2(ii, :) = reshape(RD_map_noclutter(:,:,ii), [], N*M);
 end
+fprintf('size(RDmap_input_raw_noclutter2) = [%d %d]\n', size(RDmap_input_raw_noclutter2)); % [6 256]
+%
 threshhold_noise = 4;
 knee_stop = 20;
 Maximum = 30;
 R = 88;
 T = 12;
 W = 16;
+%
+% initialize both softknee and its log scale to RDmap_input_raw_noclutter2
+%
 RDmap_input_raw_softknee = RDmap_input_raw_noclutter2;
-RDmap_input_raw_log = RDmap_input_raw_noclutter2;
+RDmap_input_raw_log      = RDmap_input_raw_noclutter2;
 for i = 1 : TotalSimulationTime
-    for j = 1: N*M
-        if threshhold_noise < RDmap_input_raw_noclutter2(i,j) && RDmap_input_raw_noclutter2(i,j)  < knee_stop
+    for j = 1:N*M
+        %
+        % Note. if TotalSimulationTime > 1 will cause error. Index in position 1 exceeds array bounds (must not exceed 1).
+        %
+        if threshhold_noise < RDmap_input_raw_noclutter2(i, j) && RDmap_input_raw_noclutter2(i,j) < knee_stop
             RDmap_input_raw_softknee(i,j) = RDmap_input_raw_noclutter2(i,j)+(1/R-1)*((RDmap_input_raw_noclutter2(i,j) -T+W/2).^2)/(2*W);
-        elseif RDmap_input_raw_noclutter2(i,j)  > knee_stop
-            RDmap_input_raw_softknee(i,j) = T + (RDmap_input_raw_noclutter2(i,j) - T)/R;
+        elseif RDmap_input_raw_noclutter2(i,j) > knee_stop
+            RDmap_input_raw_softknee(i,j) = T + (RDmap_input_raw_noclutter2(i, j) - T)/R;
         end
     end
 end
+%
 for i = 1 : TotalSimulationTime
     for j = 1: N*M
-        RDmap_input_raw_log(i,j) = log(RDmap_input_raw_noclutter2(i,j)+1)*30/7;
+        RDmap_input_raw_log(i,j) = log(RDmap_input_raw_noclutter2(i, j) + 1) * 30 / 7;
     end
 end
 % 
-% RD_map_softknee = zeros(16, 16, 3);
-% RD_map_log = zeros(16, 16, 3);
+RD_map_softknee = zeros(N, M, length(SNR));
+RD_map_log = zeros(N, M, length(SNR));
 for ii = 1:size(RDmap_input_raw_softknee,1)
     RD_map_softknee(:,:,ii) = reshape(RDmap_input_raw_softknee(ii,:),[N,M]); % Dynamic range compression: softknee
 end
@@ -320,10 +375,10 @@ end
 % mesh(see4,'edgecolor','r');
 % title('Truncated')
 % 
-% figure(5) % Dynamic range compression
+figure(5) % Dynamic range compression
 see5 = reshape(RDmap_input_raw_softknee(1, :), N, M);
-% mesh(see5,'edgecolor','r');
-% title('Dynamic range compression');
+mesh(see5,'edgecolor','r');
+title('Dynamic range compression');
 figure(11)
 imagesc(see5);
 % 
