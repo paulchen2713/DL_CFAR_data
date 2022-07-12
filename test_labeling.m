@@ -1,8 +1,5 @@
 %
 % test labeling
-%
-%
-% RD_map_dataset main program
 %   patch. June 22, 2022
 %          July 02, 2022
 %          July 11, 2022
@@ -16,13 +13,13 @@ clc;
 %
 % Simulation settings
 % 
-% Note. ¦pªG§ï TotalSimulationTime ªº°Ñ¼Æ «h newrdmap2 / newrdmap3 function 
-% ¤ºªº TotalSimulationTime °Ñ¼Æ¤]­n¸òµÛ§ï¦ı¬°¤°»ò¤£·í°Ñ¼Æ¶Ç¶i¥h ©Îª½±µ©T©w¬°1 ??
-TotalSimulationTime = 1; % number of RD maps          ¦ı¥u¯à³]¬°1 
+% Note. å¦‚æœæ”¹ TotalSimulationTime çš„åƒæ•¸ å‰‡ newrdmap2 / newrdmap3 function 
+% å…§çš„ TotalSimulationTime åƒæ•¸ä¹Ÿè¦è·Ÿè‘—æ”¹ä½†ç‚ºä»€éº¼ä¸ç•¶åƒæ•¸å‚³é€²å» æˆ–ç›´æ¥å›ºå®šç‚º1 ??
+TotalSimulationTime = 1; % number of RD maps          ä½†åªèƒ½è¨­ç‚º1 
 CarrierFreq = 78*10^9;   % carrier frequency 78 GHz   
-H = 1;                   % number of targets          ¦ı¥u¯à³]1­Ótarget
+H = 1;                   % number of targets          ä½†åªèƒ½è¨­1å€‹target
 % SNR = 0:2:10;            % dB (need to -30)??  0:5:10 
-SNR = 6;                 % dB (plus 24dB 16*16, 30dB 32*32, 32dB 40*40)   6dB? ³æ¦ì«Ü©_©Ç
+SNR = 6;                 % dB (plus 24dB 16*16, 30dB 32*32, 32dB 40*40)   6dB? å–®ä½å¾ˆå¥‡æ€ª
 %
 % MIMO parameter settings 
 %
@@ -59,12 +56,13 @@ d_unamb = c/2/SubcarrierSpacing;                       % unambiguous range is th
 v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguous velocity
 % d_resol = d_unamb/N;                                   % search resolution of range
 % v_resol = v_unamb/M;                                   % search resolution of velocity
+%
 
 % 
 % Data matrix construction
 %
 for SNR_idx = 1:length(SNR)
-    fprintf('\niter#%d\n', SNR_idx);
+    fprintf('\nSNR_iter#%d\n', SNR_idx);
     SNR_cur = SNR(SNR_idx);
     % 
     % target range setting
@@ -73,7 +71,7 @@ for SNR_idx = 1:length(SNR)
     % 
     % initialize RDmap_signal, RDmap_noise and RDmap_full_noclutter as empty TotalSimulationTime-by-1 cell arrays
     % if we initialize as zeros(1, 1) would cause errors, but why cell arrays??
-    RDmap_signal = cell(TotalSimulationTime, 1); % cell(1, 1) = 1¡Ñ1 cell array {0¡Ñ0 double}
+    RDmap_signal = cell(TotalSimulationTime, 1); % cell(1, 1) = 1Ã—1 cell array {0Ã—0 double}
     RDmap_noise  = cell(TotalSimulationTime, 1);
     RDmap_full_noclutter = cell(TotalSimulationTime, 1); 
     % fprintf('size(RDmap_signal) = [%d %d]\n', size(RDmap_signal)); % [1 1]
@@ -90,8 +88,8 @@ for SNR_idx = 1:length(SNR)
         tempMap = zeros(N, M); 
         tempMap(1, 1) = 1;     % why initialize first element in tempMap as 1?
         % 
-        % ¦pªG tempMap ²Ä1­Ó©Î²ÄN­Órow ªº¤¸¯À©M¤j©ó0 ©Î¬O tempMap ²Ä1­Ó©Î²ÄN­Ócolumn 
-        % ªº¤¸¯À©M¤j©ó0 ©Î¬O tempMapÁ`¤¸¯À©M¤p©ó¥Ø¼Ğ¼ÆH ¥ô¤@±ø¥óº¡¨¬´N¸õ¥X°j°é
+        % å¦‚æœ tempMap ç¬¬1å€‹æˆ–ç¬¬Nå€‹row çš„å…ƒç´ å’Œå¤§æ–¼0 æˆ–æ˜¯ tempMap ç¬¬1å€‹æˆ–ç¬¬Nå€‹column 
+        % çš„å…ƒç´ å’Œå¤§æ–¼0 æˆ–æ˜¯ tempMapç¸½å…ƒç´ å’Œå°æ–¼ç›®æ¨™æ•¸H ä»»ä¸€æ¢ä»¶æ»¿è¶³å°±è·³å‡ºè¿´åœˆ
         % sum(A) returns the sum of the elements
         while sum(tempMap(1, :)) > 0 || sum(tempMap(N, :)) > 0 || sum(tempMap(:, 1)) > 0 ...
                 || sum(tempMap(:, M)) > 0 || sum(sum(tempMap)) < H
@@ -101,14 +99,14 @@ for SNR_idx = 1:length(SNR)
             % DoA   = zeros(H, 1);
             %
             for h = 1:H
-                % ³£¤R°Ç¶ZÂ÷ = ÀH¾÷­È * µ´¹ï¶ZÂ÷, rand ~ U(0, 1)
+                % éƒ½åœå‹’è·é›¢ = éš¨æ©Ÿå€¼ * çµ•å°è·é›¢, rand ~ U(0, 1)
                 Range(h, 1) = rand * d_unamb;
             end
             % 
             % target Doppler velocity setting
             % 
             for h = 1:H
-                % ³£¤R°Ç³t«× = (2*ÀH¾÷­È - 1) * µ´¹ï³t«×
+                % éƒ½åœå‹’é€Ÿåº¦ = (2*éš¨æ©Ÿå€¼ - 1) * çµ•å°é€Ÿåº¦
                 Vdop(h, 1) = (2*rand - 1) * v_unamb;
             end
             % 
@@ -127,7 +125,7 @@ for SNR_idx = 1:length(SNR)
             % channel effect
             % 
             F_Channel = cell(H, 1);
-            tempMap   = zeros(N, M); % ²MªÅtempMap 
+            tempMap   = zeros(N, M); % æ¸…ç©ºtempMap 
             target_Map(:, :, time_index) = zeros(N, M); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
             for index_target = 1:H
                 % unpredictable phase difference between sources
@@ -141,7 +139,7 @@ for SNR_idx = 1:length(SNR)
                 [nn, mm] = find(RD_map_single_pure_target == max(max(RD_map_single_pure_target)));
                 tempMap(nn, mm) = 1; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
             end
-        end % end while, ¥Nªí tempMap ¦³¤£¬°¹sªºelemennt, ©Ò¥Hassignµ¹target¥²¤£¬°0
+        end % end while, ä»£è¡¨ tempMap æœ‰ä¸ç‚ºé›¶çš„elemennt, æ‰€ä»¥assignçµ¦targetå¿…ä¸ç‚º0
         target_Map(:, :, time_index) = tempMap; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
         % fprintf('size(target_Map) = [%d %d]\n', size(target_Map)); % [16 16]
         % 
@@ -173,9 +171,9 @@ for SNR_idx = 1:length(SNR)
         RDmap_signal{time_index} = fft2(F_Rx_phase_signal_only, N, M) / sqrt(N) / sqrt(M);
         RDmap_noise{time_index}  = fft2(Z_processed, N, M) / sqrt(N) / sqrt(M);
         RDmap_full_noclutter{time_index} = RDmap_signal{time_index} + RDmap_noise{time_index};
-        fprintf('size(RDmap_signal) = [%d %d] 1¡Ñ1 cell array {16¡Ñ16 double}\n', size(RDmap_signal));                 % [1 1] 1¡Ñ1 cell array {16¡Ñ16 double}
-        fprintf('size(RDmap_noise) = [%d %d] 1¡Ñ1 cell array {16¡Ñ16 double}\n', size(RDmap_noise));                   % [1 1] 1¡Ñ1 cell array {16¡Ñ16 double}
-        fprintf('size(RDmap_full_noclutter) = [%d %d] 1¡Ñ1 cell array {16¡Ñ16 double}\n', size(RDmap_full_noclutter)); % [1 1] 1¡Ñ1 cell array {16¡Ñ16 double}
+        fprintf('size(RDmap_signal) = [%d %d] 1Ã—1 cell array {16Ã—16 double}\n', size(RDmap_signal));                 % [1 1] 1Ã—1 cell array {16Ã—16 double}
+        fprintf('size(RDmap_noise) = [%d %d] 1Ã—1 cell array {16Ã—16 double}\n', size(RDmap_noise));                   % [1 1] 1Ã—1 cell array {16Ã—16 double}
+        fprintf('size(RDmap_full_noclutter) = [%d %d] 1Ã—1 cell array {16Ã—16 double}\n', size(RDmap_full_noclutter)); % [1 1] 1Ã—1 cell array {16Ã—16 double}
     end
     % 
     % vectorization
@@ -218,10 +216,10 @@ fprintf('\n-----reshape N*M-----\n');
 RD_map_label = zeros(N, M, length(SNR));     % [16 16 6]
 RD_map_noclutter = zeros(N, M, length(SNR)); % [16 16 6]
 for label_idx = 1:size(RDmap_label_true_target, 1) 
-    RD_map_label(:,:,label_idx) = reshape(RDmap_label_true_target(label_idx,:), [N, M]); % ¥u¦³target
+    RD_map_label(:,:,label_idx) = reshape(RDmap_label_true_target(label_idx,:), [N, M]); % åªæœ‰target
 end
 fprintf('size(RD_map_label) = [%d %d %d]\n', size(RD_map_label));
-% size(A, 1): A¦³´X¦C = ¼ÒÀÀ¦¸¼Æ
+% size(A, 1): Aæœ‰å¹¾åˆ— = æ¨¡æ“¬æ¬¡æ•¸
 for noclutter_idx = 1:size(RDmap_input_raw_noclutter,1)
     RD_map_noclutter(:, :, noclutter_idx) = reshape(RDmap_input_raw_noclutter(noclutter_idx, :), [N, M]); % target + noise
 end
@@ -257,7 +255,7 @@ for jj = 1:size(RDmap_input_raw_noclutter, 1)
         % Occasional Error. Unable to perform assignment because the size of the 
         % left side is 16-by-16 and the size of the right side is 16-by-16-by-6 ???
         %
-        RD_map_noclutter(:, :, jj) = rdmap; % % % ¦³®É­Ô·|¦³error % % %
+        RD_map_noclutter(:, :, jj) = rdmap; % % % æœ‰æ™‚å€™æœƒæœ‰error % % %
         % temp_la = RD_map_label(:,:,jj);
         RD_map_label(:, :, jj) = label;
         fprintf('%d,',jj)
@@ -312,7 +310,7 @@ end
 % Normalize 0~1
 %
 % % % % % 
-% for ii = 1:size(RD_map_noclutter,3) % ¼ÒÀÀ¦¸¼Æ
+% for ii = 1:size(RD_map_noclutter,3) % æ¨¡æ“¬æ¬¡æ•¸
 %     max_val=max(max(RD_map_noclutter(:,:,ii)));
 %     min_val=min(min(RD_map_noclutter(:,:,ii)));
 %     RD_map_normal(:,:,ii)=(RD_map_noclutter(:,:,ii)-min_val)/(max_val-min_val);
@@ -324,8 +322,8 @@ end
 %
 fprintf('\n-----Dynamic Range Compression-----\n');
 RDmap_input_raw_noclutter2 = zeros(1, N*M); % [1 256] 
-for ii = 1:length(SNR) % i = 1:size(RD_map_noclutter, 3) ¼ÒÀÀ¦¸¼Æ  
-    RDmap_input_raw_noclutter2(ii, :) = reshape(RD_map_noclutter(:,:,ii), [], N*M);
+for SNR_idx = 1:length(SNR) % i = 1:size(RD_map_noclutter, 3) æ¨¡æ“¬æ¬¡æ•¸  
+    RDmap_input_raw_noclutter2(SNR_idx, :) = reshape(RD_map_noclutter(:,:,SNR_idx), [], N*M);
 end
 fprintf('size(RDmap_input_raw_noclutter2) = [%d %d]\n', size(RDmap_input_raw_noclutter2)); % [6 256]
 %
@@ -372,23 +370,23 @@ end
 %
 % RD_map
 %
-% figure(1) % ¥u¦³target
+% figure(1) % åªæœ‰target
 % see1 = RD_map_label(:,:,1);
 % mesh(see1,'edgecolor','r');
 % 
-% figure(2) % ¥u¦³noise
+% figure(2) % åªæœ‰noise
 % see2 = reshape(RDmap_label_raw(1,:),N,M);
 % mesh(see2,'edgecolor','r');
 % zlim([0,10])
 % 
-% figure(3) % ¨S¦³clutter
+% figure(3) % æ²’æœ‰clutter
 % see3 = reshape(RDmap_input_raw_noclutter2(1,:),N,M);
 % mesh(see3,'edgecolor','r');
 % 
 % figure(10)
 % imagesc(see3);
 % 
-% figure(4) % ¸g¹Ltruncated
+% figure(4) % ç¶“étruncated
 % see4 = RD_map_truncated(:,:,1);
 % mesh(see4,'edgecolor','r');
 % title('Truncated')
@@ -415,29 +413,30 @@ imagesc(see5);
 % H = 4;
 
 %
-% para.mat ÀÉ®× ¦s¦³ H SNR N M ªº¸ê®Æ ±q RD_map_dataset.m / RD_map_dataset_clutter.m ²£¥Í
-% ¦ı·|ÂĞ¼g±¼¤W­± H SNR ³]©w ¥B RD_map_dataset.m / RD_map_dataset_clutter.m ªº SNR ³]©w¬O¹³
-% 0:5:10 ¸ò SNR = ¬Y­Ó©w­È ¦p6 ½Ä¬ğ? 
+% para.mat æª”æ¡ˆ å­˜æœ‰ H SNR N M çš„è³‡æ–™ å¾ RD_map_dataset.m / RD_map_dataset_clutter.m ç”¢ç”Ÿ
+% ä½†æœƒè¦†å¯«æ‰ä¸Šé¢ H SNR è¨­å®š ä¸” RD_map_dataset.m / RD_map_dataset_clutter.m çš„ SNR è¨­å®šæ˜¯åƒ
+% 0:5:10 è·Ÿ SNR = æŸå€‹å®šå€¼ å¦‚6 è¡çª? 
 % load para.mat 
 %
-% ¼g¤JÀÉ®×¸ô®|(¥Î"a"®É, ¦pªG¤å¦r¤¤¤w¸g¦s¦b¸ê®Æ, ¤£·|²MªÅ¸ê®Æ¡A¦Ó¬O¦b¸ê®Æ¤§«á¼g¤J, ¦Ó"w"·|²MªÅ­ì¥»ªº¸ê®Æ, ­«·s¼g¤J)
-fid = fopen(['.\','2007_train.txt'],'a');
+% å¯«å…¥æª”æ¡ˆè·¯å¾‘(ç”¨"a"æ™‚, å¦‚æœæ–‡å­—ä¸­å·²ç¶“å­˜åœ¨è³‡æ–™, ä¸æœƒæ¸…ç©ºè³‡æ–™ï¼Œè€Œæ˜¯åœ¨è³‡æ–™ä¹‹å¾Œå¯«å…¥, è€Œ"w"æœƒæ¸…ç©ºåŸæœ¬çš„è³‡æ–™, é‡æ–°å¯«å…¥)
+fid = fopen(['.\','2007_train.txt'], 'a');
 % fid = fopen(['D:\YU\my_yolo3\','2007_val.txt'],'a');
 %
-% ¨S¦³ RD_map_label ªº¸ê®Æ
+% æ²’æœ‰ RD_map_label çš„è³‡æ–™
 % size(RD_map_label) = [N M length(SNR], e.g. 
 for i = 1:length(SNR) % size(RD_map_label, 3)
-    [nn, mm] = find(RD_map_label(:, :, i) == 1); % targetªº¦ì¸m
-    for ii = 1:H
-        xmin(ii) = mm(ii) - 1; % ¥ª¤W
-        ymin(ii) = nn(ii) - 1; % ¥ª¤W
+    [nn, mm] = find(RD_map_label(:, :, i) == 1); % targetçš„ä½ç½®
+    for H_idx = 1:H
+        % å·¦ä¸Šé» (xmin, ymin)
+        xmin(H_idx) = mm(H_idx) - 1; % 
+        ymin(H_idx) = nn(H_idx) - 1; % 
+        % å³ä¸‹é» (xmax, ymax)
+        xmax(H_idx) = mm(H_idx) + 1; % 
+        ymax(H_idx) = nn(H_idx) + 1; % 
         
-        xmax(ii) = mm(ii) + 1; % ¥k¤U
-        ymax(ii) = nn(ii) + 1; % ¥k¤U
-        
-        fprintf('(xmin, ymin), (xmax, ymax) = (%d, %d), (%d, %d)\n', xmin(ii), ymin(ii), xmax(ii), ymax(ii));
+        fprintf('(xmin, ymin), (xmax, ymax) = (%d, %d), (%d, %d)\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx));
     end
-    fprintf(fid,'.\\training_noT_softknee_H%d_SNR%d_f%d.mat %d, %d, %d, %d, 0\n', H, SNR, i, xmin(1), ymin(1), xmax(1), ymax(1));
+    fprintf(fid,'.\\training_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, i, xmin(1), ymin(1), xmax(1), ymax(1));
     % fprintf(fid,'.\\validation_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1));
 
     % fprintf(fid,'.\\training_noT_softknee_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0 %d,%d,%d,%d,0\n',H,SNR,i,xmin(1),ymin(1),xmax(1),ymax(1),xmin(2),ymin(2),xmax(2),ymax(2));
