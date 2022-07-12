@@ -56,6 +56,7 @@ d_unamb = c/2/SubcarrierSpacing;                       % unambiguous range is th
 v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguous velocity
 % d_resol = d_unamb/N;                                   % search resolution of range
 % v_resol = v_unamb/M;                                   % search resolution of velocity
+
 % 
 % Data matrix construction
 %
@@ -67,9 +68,11 @@ for SNR_idx = 1:length(SNR)
     % 
     % cell(), called cell array, is a data type with indexed data containers called cells
     % 
-    % initialize RDmap_signal and RDmap_noise as empty TotalSimulationTime-by-1 cell arrays
+    % initialize RDmap_signal, RDmap_noise and RDmap_full_noclutter as empty TotalSimulationTime-by-1 cell arrays
+    % if we initialize as zeros(1, 1) would cause errors, but why cell arrays??
     RDmap_signal = cell(TotalSimulationTime, 1); % cell(1, 1) = 1×1 cell array {0×0 double}
     RDmap_noise  = cell(TotalSimulationTime, 1);
+    RDmap_full_noclutter = cell(TotalSimulationTime, 1); 
     % fprintf('size(RDmap_signal) = [%d %d]\n', size(RDmap_signal)); % [1 1]
     % fprintf('size(RDmap_noise) = [%d %d]\n', size(RDmap_noise));   % [1 1]
     % parameter_setting_record = [];
@@ -105,12 +108,12 @@ for SNR_idx = 1:length(SNR)
                 Vdop(h, 1) = (2*rand - 1) * v_unamb;
             end
             % 
-            % target DoA setting
+            % target DoA setting (unused)
             % 
             % for h = 1:H
             %     DoA(h, 1) = (2*rand - 1)*60; % FOV = 120 degrees 
             % end
-            % parameter_setting_record = [parameter_setting_record [Range; Vdop]]; 
+            % parameter_setting_record = [parameter_setting_record [Range; Vdop]]; % (unused)
             
             % 
             % transmitted signal (QPSK symbols)
@@ -157,13 +160,18 @@ for SNR_idx = 1:length(SNR)
         % F_Rx_n = F_Rx + Z;
         % F_Rx_phase  = F_Rx_n./F_Tx;
         Z_processed = Z./F_Tx;
-        F_Rx_phase_signal_only  = F_Rx./F_Tx; % [16 16]
+        F_Rx_phase_signal_only  = F_Rx ./ F_Tx; % [16 16]
         fprintf('size(Z_processed) = [%d %d]\n', size(Z_processed));
         fprintf('size(F_Rx_phase_signal_only) = [%d %d]\n', size(F_Rx_phase_signal_only));
         %
+        % why specified N, M in fft2? its already N-by-M matrix
+        % 
         RDmap_signal{time_index} = fft2(F_Rx_phase_signal_only, N, M) / sqrt(N) / sqrt(M);
-        RDmap_noise{time_index}  = fft2(Z_processed, N, M)/sqrt(N)/sqrt(M);
+        RDmap_noise{time_index}  = fft2(Z_processed, N, M) / sqrt(N) / sqrt(M);
         RDmap_full_noclutter{time_index} = RDmap_signal{time_index} + RDmap_noise{time_index};
+        fprintf('size(RDmap_signal) = [%d %d]\n', size(RDmap_signal));                 % [1 1]
+        fprintf('size(RDmap_noise) = [%d %d]\n', size(RDmap_noise));                   % [1 1]
+        fprintf('size(RDmap_full_noclutter) = [%d %d]\n', size(RDmap_full_noclutter)); % [1 1]
     end
     % 
     % vectorization
