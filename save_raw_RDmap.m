@@ -3,6 +3,7 @@
 %   patch. June 22, 2022
 %          July 02, 2022
 %          July 11, 2022
+%          July 19, 2022
 %
 clear;
 clc;
@@ -58,7 +59,7 @@ v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguous velocity
 % v_resol = v_unamb/M;                                   % search resolution of velocity
 %
 
-max_iter = 3;
+max_iter = 1;
 for iter = 1:max_iter
     fprintf("iter: %d\n", iter);
     % 
@@ -101,16 +102,16 @@ for iter = 1:max_iter
                 Vdop  = zeros(H, 1);
                 % DoA   = zeros(H, 1);
                 %
-                for h = 1:H
+                for h_idx = 1:H
                     % 都卜勒距離 = 隨機值 * 絕對距離, rand ~ U(0, 1)
-                    Range(h, 1) = rand * d_unamb;
+                    Range(h_idx, 1) = rand * d_unamb;
                 end
                 % 
                 % target Doppler velocity setting
                 % 
-                for h = 1:H
+                for h_idx = 1:H
                     % 都卜勒速度 = (2*隨機值 - 1) * 絕對速度
-                    Vdop(h, 1) = (2*rand - 1) * v_unamb;
+                    Vdop(h_idx, 1) = (2*rand - 1) * v_unamb;
                 end
                 % 
                 % target DoA setting (unused)
@@ -240,10 +241,10 @@ for iter = 1:max_iter
     m_true = zeros(TotalSimulationTime, length(SNR));
     %
     for jj = 1:size(RDmap_input_raw_noclutter, 1)
-        for h = 1:H
-            [n_max(h, jj), m_max(h, jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
-            RD_map_noclutter_2(n_max(h, jj), m_max(h,jj), jj) = 0;
-            RD_map_noclutter_max(n_max(h, jj), m_max(h, jj), jj) = 1;
+        for h_idx = 1:H
+            [n_max(h_idx, jj), m_max(h_idx, jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
+            RD_map_noclutter_2(n_max(h_idx, jj), m_max(h_idx,jj), jj) = 0;
+            RD_map_noclutter_max(n_max(h_idx, jj), m_max(h_idx, jj), jj) = 1;
         end
         %
         [n_max_idx(:, jj), m_max_idx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
@@ -265,7 +266,7 @@ for iter = 1:max_iter
         end     
     end
     % 
-
+    
     %
     % Dynamic Range Compression (DRC)
     %
@@ -334,8 +335,12 @@ for iter = 1:max_iter
     % load para.mat 
     %
     % 寫入檔案路徑(用"a"時, 如果文字中已經存在資料, 不會清空資料, 而是在資料之後寫入, 而"w"會清空原本的資料, 重新寫入)
-    fid = fopen(['.\','2007_train.txt'], 'a');
+    fid = fopen(['D:\Datasets\RD_maps\labels\', num2str(iter) '.txt'], 'w');
     % fid = fopen(['.\','2007_val.txt'],'a');
+    %
+    xmin = zeros(H); ymin = zeros(H); % (xmin, ymin)
+    xmax = zeros(H); ymax = zeros(H); % (xmax, ymax)
+    x = zeros(H); y = zeros(H); w = zeros(H); h = zeros(H); % [x, y, w, h]
     %
     % size(RD_map_label) = [N M length(SNR)], e.g. [16 16 1]
     for i = 1:length(SNR) % size(RD_map_label, 3)
@@ -343,14 +348,37 @@ for iter = 1:max_iter
         for H_idx = 1:H
             % 左上點 (xmin, ymin)
             xmin(H_idx) = mm(H_idx) - 1; % 
-            ymin(H_idx) = nn(H_idx) - 1; % 
+            ymin(H_idx) = nn(H_idx) - 1; %
+            
             % 右下點 (xmax, ymax)
             xmax(H_idx) = mm(H_idx) + 1; % 
             ymax(H_idx) = nn(H_idx) + 1; % 
-            % 
+            %
             fprintf('(xmin, ymin), (xmax, ymax) = (%d, %d), (%d, %d)\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx));
+            % [class_label xmin ymin xmax ymax], separated by space
+            % fprintf(fid,'0 %d %d %d %d\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx)); % 
+            
+            % 中心點 (x, y)
+            x(H_idx) = (xmax(H_idx) + xmin(H_idx)) / 2; % original scale
+            y(H_idx) = (ymax(H_idx) + ymin(H_idx)) / 2; % original scale
+            % 寬長 w, h
+            w(H_idx) = (ymax(H_idx) - ymin(H_idx)); % original scale
+            h(H_idx) = (xmax(H_idx) - xmin(H_idx)); % original scale
+            %
+            fprintf('(x, y), (w, h) = (%d, %d), (%d, %d)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
+            
+            % rescale to [0, 1]
+            x(H_idx) = x(H_idx) / 16; 
+            y(H_idx) = y(H_idx) / 16; 
+            w(H_idx) = w(H_idx) / 16;
+            h(H_idx) = h(H_idx) / 16;
+            %
+            fprintf('(x, y), (w, h) = (%f, %f), (%f, %f)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
+            
+            % [class_label  x  y  w  h], separated by space, scaled between [0, 1] 
+            fprintf(fid,'0 %f %f %f %f\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx)); 
         end
-        fprintf(fid,'.\\train_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, iter, xmin(1), ymin(1), xmax(1), ymax(1));
+        % fprintf(fid,'.\\train_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, iter, xmin(1), ymin(1), xmax(1), ymax(1));
         % fprintf(fid,'.\\valid_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, iter, xmin(1), ymin(1), xmax(1), ymax(1));
     end
     fclose(fid);
@@ -403,6 +431,7 @@ for iter = 1:max_iter
     
     % train_H%d_SNR%d_f%d.mat
     file_name = ['..\VOC2007\JPEGImages\train_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(iter),'.mat'];
+    RD_map_softknee;
     save(file_name, 'RD_map_softknee'); % for YOLO-CFAR input
 end
 
