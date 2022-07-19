@@ -59,7 +59,7 @@ v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguous velocity
 % v_resol = v_unamb/M;                                   % search resolution of velocity
 %
 
-max_iter = 1;
+max_iter = 1600;
 for iter = 1:max_iter
     fprintf("iter: %d\n", iter);
     % 
@@ -251,6 +251,9 @@ for iter = 1:max_iter
         [n_true(:, jj), m_true(:, jj)] = find(RD_map_label(:,:,jj)==1);
         %
         if sum(abs(n_max_idx(:, jj) - n_true(:, jj)) == 1) > 0 || sum(abs(m_max_idx(:,jj) - m_true(:,jj)) == 1) > 0
+            %
+            % 有時候即使沒用到 newrdmap2() 也可以正常執行??
+            %
             % newrdmap2 for single-target?
             % newrdmap3 for multi-target? nope
             [rdmap, label] = newrdmap2(H, SNR); 
@@ -335,8 +338,8 @@ for iter = 1:max_iter
     % load para.mat 
     %
     % 寫入檔案路徑(用"a"時, 如果文字中已經存在資料, 不會清空資料, 而是在資料之後寫入, 而"w"會清空原本的資料, 重新寫入)
-    fid = fopen(['D:\Datasets\RD_maps\labels\', num2str(iter) '.txt'], 'w');
-    % fid = fopen(['.\','2007_val.txt'],'a');
+    fid1 = fopen(['D:\Datasets\RD_maps\checks\', 'original_coordinates.txt'], 'a'); % 儲存所有原始座標 (xmin, ymin), (xmax, ymax)
+    fid2 = fopen(['D:\Datasets\RD_maps\labels\', num2str(iter),'.txt'], 'w'); % 儲存真正要用到的label
     %
     xmin = zeros(H); ymin = zeros(H); % (xmin, ymin)
     xmax = zeros(H); ymax = zeros(H); % (xmax, ymax)
@@ -356,18 +359,18 @@ for iter = 1:max_iter
             %
             fprintf('(xmin, ymin), (xmax, ymax) = (%d, %d), (%d, %d)\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx));
             % [class_label xmin ymin xmax ymax], separated by space
-            % fprintf(fid,'0 %d %d %d %d\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx)); % 
+            fprintf(fid1,'%d.txt %d %d %d %d\n', iter, xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx)); % 
             
-            % 中心點 (x, y)
-            x(H_idx) = (xmax(H_idx) + xmin(H_idx)) / 2; % original scale
-            y(H_idx) = (ymax(H_idx) + ymin(H_idx)) / 2; % original scale
-            % 寬長 w, h
-            w(H_idx) = (ymax(H_idx) - ymin(H_idx)); % original scale
-            h(H_idx) = (xmax(H_idx) - xmin(H_idx)); % original scale
+            % 中心點 (x, y) with original scale
+            x(H_idx) = (xmax(H_idx) + xmin(H_idx)) / 2; % 
+            y(H_idx) = (ymax(H_idx) + ymin(H_idx)) / 2; % 
+            % 寬 長  (w, h) with original scale
+            w(H_idx) = (ymax(H_idx) - ymin(H_idx)); % 
+            h(H_idx) = (xmax(H_idx) - xmin(H_idx)); % 
             %
             fprintf('(x, y), (w, h) = (%d, %d), (%d, %d)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
             
-            % rescale to [0, 1]
+            % (x, y), (w, h) rescale to [0, 1]
             x(H_idx) = x(H_idx) / 16; 
             y(H_idx) = y(H_idx) / 16; 
             w(H_idx) = w(H_idx) / 16;
@@ -376,12 +379,13 @@ for iter = 1:max_iter
             fprintf('(x, y), (w, h) = (%f, %f), (%f, %f)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
             
             % [class_label  x  y  w  h], separated by space, scaled between [0, 1] 
-            fprintf(fid,'0 %f %f %f %f\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx)); 
+            fprintf(fid2,'0 %f %f %f %f\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx)); 
         end
         % fprintf(fid,'.\\train_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, iter, xmin(1), ymin(1), xmax(1), ymax(1));
         % fprintf(fid,'.\\valid_H%d_SNR%d_f%d.mat %d,%d,%d,%d,0\n', H, SNR, iter, xmin(1), ymin(1), xmax(1), ymax(1));
     end
-    fclose(fid);
+    fclose(fid1);
+    fclose(fid2);
     
     %
     % RD_map
@@ -408,10 +412,11 @@ for iter = 1:max_iter
     % title('Truncated')
     % 
     % figure(5) % Dynamic range compression
-    see5 = reshape(RDmap_input_raw_softknee(1, :), N, M);
+    % see5 = reshape(RDmap_input_raw_softknee(1, :), N, M);
+    see5 = RD_map_softknee;
     temp = mesh(see5,'edgecolor','r');
-    temp_filename = ['.\',num2str(iter),'_ref','.jpeg'];
-    saveas(gcf, temp_filename, 'jpeg');
+    temp_filename = ['D:\Datasets\RD_maps\mesh_figures\',num2str(iter),'_mesh','.jpg'];
+    saveas(gcf, temp_filename, 'jpg');
     % title('Dynamic range compression');
     % figure(iter)
     imagesc(see5);
@@ -420,18 +425,21 @@ for iter = 1:max_iter
     set(gca,'YTick',[]) % Remove the ticks in the y axis
     set(gca,'Position', [0 0 1 1]) % Make the axes occupy the hole figure
     
-    % % saveas(figureHandle,'filename','format') 
-    % gcf means "get current figure"
-    cur_filename = [num2str(iter),'.jpeg'];
-    saveas(gcf, cur_filename, 'jpeg');
+    cur_filename = ['D:\Datasets\RD_maps\scaled_colors\',num2str(iter),'_sc','.jpg']; % sc means scaled color
+    % saveas(figureHandle,'filename','format'), gcf means "get current figure"
+    saveas(gcf, cur_filename, 'jpg');
     % 
     % save(['.\CFAR_data\CFAR_train_noclutter_H',num2str(H),'_SNR',num2str(SNR),'.mat'], 'RD_map_noclutter'); % for CFAR
     % save(['.\DL_input\DL_input_train_truncated_H',num2str(H),'_SNR',num2str(SNR),'.mat'], 'RDmap_input_raw_truncated'); % for DL-CFAR input
     % save(['.\DL_label\DL_label_train_label_noise_H',num2str(H),'_SNR',num2str(SNR),'.mat'], 'RDmap_label_raw'); % for DL-CFAR label(target)
     
+    see5 = rescale(RD_map_softknee,0,255);
+    see5 = uint8(see5);
+    file_name = ['D:\Datasets\RD_maps\images\',num2str(iter),'.jpg'];
+    imwrite(see5, file_name);
     % train_H%d_SNR%d_f%d.mat
-    file_name = ['..\VOC2007\JPEGImages\train_H',num2str(H),'_SNR',num2str(SNR),'_f',num2str(iter),'.mat'];
-    RD_map_softknee;
+    file_name = ['D:\Datasets\RD_maps\mats\',num2str(iter),'.mat'];
+    % imagesc(RD_map_softknee);
     save(file_name, 'RD_map_softknee'); % for YOLO-CFAR input
 end
 
