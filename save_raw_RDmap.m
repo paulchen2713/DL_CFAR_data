@@ -59,7 +59,7 @@ v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguous velocity
 % v_resol = v_unamb/M;                                   % search resolution of velocity
 %
 
-max_iter = 1600;
+max_iter = 1; % 1600
 for iter = 1:max_iter
     fprintf("iter: %d\n", iter);
     % 
