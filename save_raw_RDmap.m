@@ -306,11 +306,11 @@ for iter = 1:max_iter
     % fprintf('size(RDmap_input_raw_softknee) = [%d %d]\n', size(RDmap_input_raw_softknee)); % [6 256]
     % fprintf('size(RDmap_input_raw_log) = [%d %d]\n', size(RDmap_input_raw_log));           % [6 256]
     %
-    for i = 1 : TotalSimulationTime
-        for j = 1: N*M
-            RDmap_input_raw_log(i,j) = log(RDmap_input_raw_noclutter2(i, j) + 1) * 30 / 7;
-        end
-    end
+%     for i = 1 : TotalSimulationTime
+%         for j = 1: N*M
+%             RDmap_input_raw_log(i,j) = log(RDmap_input_raw_noclutter2(i, j) + 1) * 30 / 7;
+%         end
+%     end
     % 
     RD_map_softknee = zeros(N, M, length(SNR));
     RD_map_log = zeros(N, M, length(SNR));
@@ -323,9 +323,9 @@ for iter = 1:max_iter
     % 
     % Dynamic range compression: log
     % 
-    for log_idx = 1:length(SNR) % size(RDmap_input_raw_log, 1)
-        RD_map_log(:, :, log_idx) = reshape(RDmap_input_raw_log(log_idx, :), [N, M]); 
-    end
+%     for log_idx = 1:length(SNR) % size(RDmap_input_raw_log, 1)
+%         RD_map_log(:, :, log_idx) = reshape(RDmap_input_raw_log(log_idx, :), [N, M]); 
+%     end
     
     % SNR = 6;
     % CNR = 15;
@@ -356,8 +356,8 @@ for iter = 1:max_iter
             % 右下點 (xmax, ymax)
             xmax(H_idx) = mm(H_idx) + 1; % 
             ymax(H_idx) = nn(H_idx) + 1; % 
-            %
-            fprintf('(xmin, ymin), (xmax, ymax) = (%d, %d), (%d, %d)\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx));
+            % 
+            % fprintf('(xmin, ymin), (xmax, ymax) = (%d, %d), (%d, %d)\n', xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx));
             % [class_label xmin ymin xmax ymax], separated by space
             fprintf(fid1,'%d.txt %d %d %d %d\n', iter, xmin(H_idx), ymin(H_idx), xmax(H_idx), ymax(H_idx)); % 
             
@@ -368,7 +368,7 @@ for iter = 1:max_iter
             w(H_idx) = (ymax(H_idx) - ymin(H_idx)); % 
             h(H_idx) = (xmax(H_idx) - xmin(H_idx)); % 
             %
-            fprintf('(x, y), (w, h) = (%d, %d), (%d, %d)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
+            % fprintf('(x, y), (w, h) = (%d, %d), (%d, %d)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
             
             % (x, y), (w, h) rescale to [0, 1]
             x(H_idx) = x(H_idx) / 16; 
@@ -376,7 +376,7 @@ for iter = 1:max_iter
             w(H_idx) = w(H_idx) / 16;
             h(H_idx) = h(H_idx) / 16;
             %
-            fprintf('(x, y), (w, h) = (%f, %f), (%f, %f)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
+            % fprintf('(x, y), (w, h) = (%f, %f), (%f, %f)\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx));
             
             % [class_label  x  y  w  h], separated by space, scaled between [0, 1] 
             fprintf(fid2,'0 %f %f %f %f\n', x(H_idx), y(H_idx), w(H_idx), h(H_idx)); 
@@ -414,10 +414,11 @@ for iter = 1:max_iter
     % figure(5) % Dynamic range compression
     % see5 = reshape(RDmap_input_raw_softknee(1, :), N, M);
     see5 = RD_map_softknee;
-    temp = mesh(see5,'edgecolor','r');
-    temp_filename = ['D:\Datasets\RD_maps\mesh_figures\',num2str(iter),'_mesh','.jpg'];
-    saveas(gcf, temp_filename, 'jpg');
+%     temp = mesh(see5,'edgecolor','r');
+%     temp_filename = ['D:\Datasets\RD_maps\mesh_figures\',num2str(iter),'_mesh','.png'];
+%     saveas(gcf, temp_filename, 'png');
     % title('Dynamic range compression');
+    
     % figure(iter)
     imagesc(see5);
     
@@ -427,13 +428,13 @@ for iter = 1:max_iter
     
     cur_filename = ['D:\Datasets\RD_maps\scaled_colors\',num2str(iter),'_sc','.jpg']; % sc means scaled color
     % saveas(figureHandle,'filename','format'), gcf means "get current figure"
-    saveas(gcf, cur_filename, 'jpg');
-    % 
+    saveas(gcf, cur_filename, 'jpg'); 
+    
     % save(['.\CFAR_data\CFAR_train_noclutter_H',num2str(H),'_SNR',num2str(SNR),'.mat'], 'RD_map_noclutter'); % for CFAR
     % save(['.\DL_input\DL_input_train_truncated_H',num2str(H),'_SNR',num2str(SNR),'.mat'], 'RDmap_input_raw_truncated'); % for DL-CFAR input
     % save(['.\DL_label\DL_label_train_label_noise_H',num2str(H),'_SNR',num2str(SNR),'.mat'], 'RDmap_label_raw'); % for DL-CFAR label(target)
     
-    see5 = rescale(RD_map_softknee,0,255);
+    see5 = rescale(RD_map_softknee, 0, 255);
     see5 = uint8(see5);
     file_name = ['D:\Datasets\RD_maps\images\',num2str(iter),'.jpg'];
     imwrite(see5, file_name);
@@ -442,5 +443,3 @@ for iter = 1:max_iter
     % imagesc(RD_map_softknee);
     save(file_name, 'RD_map_softknee'); % for YOLO-CFAR input
 end
-
-
