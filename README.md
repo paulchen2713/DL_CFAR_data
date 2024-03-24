@@ -2,4 +2,4 @@
 Generate RD_map training data for DL-based CFAR algorithm
 
 ## Dependency
-```MATLAB 2018b```
+This set of code was tested on MATLAB R2018b
