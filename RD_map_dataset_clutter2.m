@@ -4,16 +4,11 @@
 clear;
 clc;
 %
-% parameter_setting_record = [range1; range2; Vdop1; Vdop2];
-% 
-% RDmap_signal
-% RDmap_noise
-%
 % Simulation settings
 % 
 TotalSimulationTime = 1; % number of RD maps
 CarrierFreq = 78*10^9;   % carrier frequency 78 GHz
-H = 1;                   % number of targets
+H = 10;                   % number of targets
 % SNR = [0:5:10];        % dB (need to -30)
 SNR = 0;                 % dB (plus 24dB 16*16, 30dB 32*32, 32dB 40*40)
 %
@@ -25,7 +20,7 @@ numRx = 1;
 % Frame-related parameters
 % 
 % RD map with size = N*M
-N = 4;       % number of subcarrier
+N = 64;       % number of subcarrier
 M = N;        % number of OFDM symbol
 Nfft  = N;    % number of FFT points in frequency domain
 frame = 1;    % number of frame used
@@ -50,59 +45,63 @@ RoundTripTime = @(d) 2*d/c;                            % Round Trip Time (RTT) f
 %
 d_unamb = c/2/SubcarrierSpacing;                       % unambiguity range
 v_unamb = c/2/CarrierFreq/PeriodOFDMsymbol_whole;      % unambiguity velocity
-d_rel = d_unamb/N; % search resolution of range
-v_rel = v_unamb/M; % search resolution of velocity
-% 
-% Data matrix construction
-% 
+% d_rel = d_unamb/N; % search resolution of range
+% v_rel = v_unamb/M; % search resolution of velocity
+
+% % % % % % % % % % % % % % % % % % % % % 
+%                                       % 
+%     Data matrix construction          % 
+%                                       % 
+% % % % % % % % % % % % % % % % % % % % % 
 
 % 
 % target range setting
 % 
 RDmap_signal = cell(TotalSimulationTime,1); % 玻ネ灿璏皚
 RDmap_noise = cell(TotalSimulationTime,1);
-parameter_setting_record = [];
+% parameter_setting_record = [];
 
+%
+% target Range setting
+%
 for h = 1:H
     Range(h,1) = rand*d_unamb;
 end
+%
 % target Doppler velocity setting
+%
 for h = 1:H
-    Vdop(h,1) = (2*rand-1)*v_unamb;
+    Vdop(h,1) = (2*rand-1)*v_unamb;  % -v to v
 end
 % 
 % target DoA setting
 % 
 for h = 1:H
-    DoA(h,1) = (2*rand-1)*60; % FOV = 120 degrees
+    DoA(h,1) = (2*rand-1)*60; % FOV := -60~60 := 120 degrees
 end
-parameter_setting_record = [parameter_setting_record [Range;Vdop]]; 
+% parameter_setting_record = [parameter_setting_record [Range;Vdop]]; 
 
 % 
 % transmitted signal (QPSK symbols)
 % 
 F_Tx = qammod(round(rand(N,M)*4 + 0.5, 0) - 1, 4) / sqrt(2);
+
 % 
 % channel effect
 % 
 F_Channel = cell(H,1);
 for index_target = 1:H
     NuiPhase = rand*2*pi;    % unpredictable phase difference between sources
-    range=exp(-1j*2*pi*RoundTripTime(Range(index_target))*SubcarrierSpacing*(1:N).');
-    doppler=exp(1j*2*pi*PeriodOFDMsymbol_whole*FreqDopp(Vdop(index_target))*(1:N));
-    F_Channel{index_target} =  F_Tx .* (range*doppler)*exp(1j*NuiPhase);
-
-    fft2_input = F_Channel{index_target}./F_Tx;
-    fft2_result = fft2(fft2_input, N, M);
-
-    RD_map_single_pure_target = abs(fft2_result); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-    [nn,mm] = find(RD_map_single_pure_target == max(max(RD_map_single_pure_target)));
+    range = exp(-1j*2*pi*RoundTripTime(Range(index_target))*SubcarrierSpacing*(1:N).');
+    doppler = exp(1j*2*pi*PeriodOFDMsymbol_whole*FreqDopp(Vdop(index_target))*(1:N));
+    F_Channel{index_target} = F_Tx .* (range*doppler) * exp(1j*NuiPhase);
 end 
+
 % 
 % received signal
 % 
 F_Rx = cell(1,1);
-F_Rx_phase = cell(1,1);    
+% F_Rx_phase = cell(1,1);    
 F_Rx = zeros(N,M);        
 P_noise = 0.5;
 P_signal = P_noise*(10^(SNR/10));
@@ -112,11 +111,11 @@ end
 % 
 % add sptially white noise
 % 
-P_Rx = mean(mean(F_Rx.*conj(F_Rx)));
+P_Rx = mean(mean(F_Rx .* conj(F_Rx)));
 Z = sqrt(P_noise/2)*(randn(N,M)+1j*randn(N,M));
 F_Rx_n = F_Rx + Z;
-F_Rx_phase = F_Rx_n./F_Tx;
-Z_processed = Z./F_Tx;
+% F_Rx_phase = F_Rx_n ./ F_Tx;
+Z_processed = Z ./ F_Tx;
 F_Rx_phase_signal_only = F_Rx ./ F_Tx;
 RDmap_signal = fft2(F_Rx_phase_signal_only, N, M)/sqrt(N)/sqrt(M);   
 RDmap_noise = fft2(Z_processed,N,M)/sqrt(N)/sqrt(M);
@@ -147,30 +146,28 @@ RDmap_input_noclutter = reshape(abs(RDmap_full_noclutter),1,N*M);
 
 RDmap_input_raw(:) = RDmap_input(:).^2;
 RDmap_input_raw_noclutter(:) = RDmap_input_noclutter(:).^2;
+
 % 
 % reshape N*M
 % 
-for ii = 1:size(RDmap_input_raw,1)% size(A,1):AΤ碭 = 家览Ω计
+for ii = 1:size(RDmap_input_raw,1)  % size(A,1):AΤ碭 = 家览Ω计
     RD_map_clutter(:,:,ii) = reshape(RDmap_input_raw(ii,:),[N,M]); % target+noise+clutter
 end
-for ii = 1:size(RDmap_input_raw,1)% size(A,1):AΤ碭 = 家览Ω计
+for ii = 1:size(RDmap_input_raw,1)  % size(A,1):AΤ碭 = 家览Ω计
     RD_map_noclutter(:,:,ii) = reshape(RDmap_input_raw_noclutter(ii,:),[N,M]); % target+noise
 end
-
-
-% % % % % 
-% 
-% truncated (optional)
-% 
-truncated_threshold = 10;
 
 figure(8);
 imagesc(RD_map_clutter);
 figure(9);
 mesh(RD_map_clutter,'edgecolor','r');
 
-RDmap_input_raw_truncated(1,:) = reshape(RD_map_clutter(:,:,1),[],N*M);
-RDmap_input_raw_truncated(1, find(RDmap_input_raw_truncated(1,:) >= truncated_threshold) ) = truncated_threshold;
+% 
+% truncated (optional)
+% 
+truncated_threshold = 10;
+RDmap_input_raw_truncated = reshape(RD_map_clutter(:,:,1),[],N*M);
+RDmap_input_raw_truncated(find(RDmap_input_raw_truncated(1,:) >= truncated_threshold) ) = truncated_threshold;
 
 for ii = 1:size(RDmap_input_raw_truncated,1)
     RD_map_truncated(:,:,ii) = reshape(RDmap_input_raw_truncated(ii,:),[N,M]); 
@@ -185,7 +182,7 @@ mesh(RD_map_truncated,'edgecolor','r');
 % Dynamic range compression
 % 
 % % % % % 
-for ii = 1:size(RD_map_clutter,3)% 家览Ω计
+for ii = 1:size(RD_map_clutter,3)  % 家览Ω计
     RDmap_input_raw_clutter2(ii,:) = reshape(RD_map_clutter(:,:,ii),[],N*M);
 end
 threshhold_noise = 4;
