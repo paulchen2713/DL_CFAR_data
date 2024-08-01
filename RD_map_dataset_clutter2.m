@@ -42,7 +42,7 @@ PeriodFrame = PeriodOFDMsymbol_whole * M;
 % 
 % Common parameter definition
 % 
-c = 3*10^8;    % speed of light
+c = 299792458;    % speed of light
 FreqDopp = @(RelVelocity) 2*RelVelocity*CarrierFreq/c; % Doppler shift function
 RoundTripTime = @(d) 2*d/c;                            % Round Trip Time (RTT) function
 %
@@ -55,7 +55,7 @@ v_rel = v_unamb/M; % search resolution of velocity
 % 
 % Data matrix construction
 % 
-SNR_g = SNR;
+
 % 
 % target range setting
 % 
@@ -63,52 +63,41 @@ RDmap_signal = cell(TotalSimulationTime,1); % 產生空細胞陣列
 RDmap_noise = cell(TotalSimulationTime,1);
 parameter_setting_record = [];
 
-tempMap = zeros(N,M);
-tempMap(1,1) = 1;
-count = 0;
-while sum(tempMap(1,:))>0 || sum(tempMap(N,:))>0 || sum(tempMap(:,1))>0 || sum(tempMap(:,M))>0 || sum(sum(tempMap))<H
-%     fprintf('%d\n', sum(tempMap(1,:)~=0)>0 || sum(tempMap(N,:)~=0)>0 || sum(tempMap(:,1)~=0)>0 || sum(tempMap(:,M)~=0)>0);   
-    fprintf('%d\n', count);
-    count = count + 1;
-    for h = 1:H
-        Range(h,1) = rand*d_unamb;
-    end
-    % target Doppler velocity setting
-    for h = 1:H
-        Vdop(h,1) = (2*rand-1)*v_unamb;
-    end
-    % 
-    % target DoA setting
-    % 
-    for h = 1:H
-        DoA(h,1) = (2*rand-1)*60; % FOV = 120 degrees
-    end
-    parameter_setting_record = [parameter_setting_record [Range;Vdop]]; 
-    % 
-    % transmitted signal (QPSK symbols)
-    % 
-    F_Tx = qammod(round(rand(N,M)*4+0.5,0)-1,4)/sqrt(2);
-    % 
-    % channel effect
-    % 
-    F_Channel = cell(H,1);
-    tempMap = zeros(N,M);
-    target_Map = zeros(N,M); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-    for index_target = 1:H
-        NuiPhase = rand*2*pi;    % unpredictable phase difference between sources
-        range=exp(-1j*2*pi*RoundTripTime(Range(index_target))*SubcarrierSpacing*[1:N].');
-        doppler=exp(1j*2*pi*PeriodOFDMsymbol_whole*FreqDopp(Vdop(index_target))*[1:M]);
-        F_Channel{index_target} =  F_Tx.*(range*doppler)*exp(1j*NuiPhase);
-        
-        fft2_input = F_Channel{index_target}./F_Tx;
-        fft2_result = fft2(fft2_input, N, M);
-        
-        RD_map_single_pure_target = abs(fft2_result); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-        [nn,mm]=find(RD_map_single_pure_target == max(max(RD_map_single_pure_target)));
-        tempMap(nn,mm) = 1; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-    end       
+for h = 1:H
+    Range(h,1) = rand*d_unamb;
 end
-target_Map = tempMap; % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+% target Doppler velocity setting
+for h = 1:H
+    Vdop(h,1) = (2*rand-1)*v_unamb;
+end
+% 
+% target DoA setting
+% 
+for h = 1:H
+    DoA(h,1) = (2*rand-1)*60; % FOV = 120 degrees
+end
+parameter_setting_record = [parameter_setting_record [Range;Vdop]]; 
+
+% 
+% transmitted signal (QPSK symbols)
+% 
+F_Tx = qammod(round(rand(N,M)*4 + 0.5, 0) - 1, 4) / sqrt(2);
+% 
+% channel effect
+% 
+F_Channel = cell(H,1);
+for index_target = 1:H
+    NuiPhase = rand*2*pi;    % unpredictable phase difference between sources
+    range=exp(-1j*2*pi*RoundTripTime(Range(index_target))*SubcarrierSpacing*(1:N).');
+    doppler=exp(1j*2*pi*PeriodOFDMsymbol_whole*FreqDopp(Vdop(index_target))*(1:N));
+    F_Channel{index_target} =  F_Tx .* (range*doppler)*exp(1j*NuiPhase);
+
+    fft2_input = F_Channel{index_target}./F_Tx;
+    fft2_result = fft2(fft2_input, N, M);
+
+    RD_map_single_pure_target = abs(fft2_result); % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+    [nn,mm] = find(RD_map_single_pure_target == max(max(RD_map_single_pure_target)));
+end 
 % 
 % received signal
 % 
@@ -116,7 +105,7 @@ F_Rx = cell(1,1);
 F_Rx_phase = cell(1,1);    
 F_Rx = zeros(N,M);        
 P_noise = 0.5;
-P_signal = P_noise*(10^(SNR_g/10));
+P_signal = P_noise*(10^(SNR/10));
 for index_target = 1:H
     F_Rx = F_Rx + sqrt(P_signal/2)*F_Channel{index_target};
 end
@@ -128,8 +117,8 @@ Z = sqrt(P_noise/2)*(randn(N,M)+1j*randn(N,M));
 F_Rx_n = F_Rx + Z;
 F_Rx_phase = F_Rx_n./F_Tx;
 Z_processed = Z./F_Tx;
-F_Rx_phase_signal_only = F_Rx./F_Tx;
-RDmap_signal = fft2(F_Rx_phase_signal_only,N,M)/sqrt(N)/sqrt(M);   
+F_Rx_phase_signal_only = F_Rx ./ F_Tx;
+RDmap_signal = fft2(F_Rx_phase_signal_only, N, M)/sqrt(N)/sqrt(M);   
 RDmap_noise = fft2(Z_processed,N,M)/sqrt(N)/sqrt(M);
 % 
 % 沒有 clutter_size_range, clutter_size_Doppler, clutter_power 的資料
@@ -149,27 +138,18 @@ clutter(clutter_range_start:clutter_range_end,clutter_Doppler_start:clutter_Dopp
 % 
 RDmap_full = RDmap_signal + RDmap_noise + clutter;
 RDmap_full_noclutter = RDmap_signal + RDmap_noise;
-RDmap_DLlabel_noiseclutter = RDmap_noise + clutter;
+
 %
 % vectorization
 %
 RDmap_input = reshape(abs(RDmap_full),1,N*M);
 RDmap_input_noclutter = reshape(abs(RDmap_full_noclutter),1,N*M);
-RDmap_label = reshape(abs(RDmap_noise),1,N*M); % noise
-RDmap_DLlabel_clutter = reshape(abs(RDmap_DLlabel_noiseclutter),1,N*M);
-RDmap_label_true_target = reshape(target_Map,1,N*M); % target
 
 RDmap_input_raw(:) = RDmap_input(:).^2;
 RDmap_input_raw_noclutter(:) = RDmap_input_noclutter(:).^2;
-RDmap_label_raw(:) = RDmap_label(:).^2; % noise
-RDmap_DLlabel_clutter_raw(:) = RDmap_DLlabel_clutter(:).^2; % noise+clutter
-
 % 
 % reshape N*M
 % 
-for ii = 1:size(RDmap_label_true_target,1)
-    RD_map_label(:,:,ii) = reshape(RDmap_label_true_target(ii,:),[N,M]); % 只有target
-end
 for ii = 1:size(RDmap_input_raw,1)% size(A,1):A有幾列 = 模擬次數
     RD_map_clutter(:,:,ii) = reshape(RDmap_input_raw(ii,:),[N,M]); % target+noise+clutter
 end
