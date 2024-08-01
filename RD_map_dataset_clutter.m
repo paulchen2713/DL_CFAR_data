@@ -13,7 +13,7 @@ clc;
 % 
 TotalSimulationTime = 1; % number of RD maps
 CarrierFreq = 78*10^9;   % carrier frequency 78 GHz
-H = 1;                   % number of targets
+H = 10;                   % number of targets
 % SNR = [0:5:10];        % dB (need to -30)
 SNR = 6;                 % dB (plus 24dB 16*16, 30dB 32*32, 32dB 40*40)
 %
@@ -25,8 +25,8 @@ numRx = 1;
 % Frame-related parameters
 % 
 % RD map with size = N*M
-N = 16;       % number of subcarrier
-M = 16;       % number of OFDM symbol
+N = 64;       % number of subcarrier
+M = N;       % number of OFDM symbol
 Nfft  = N;    % number of FFT points in frequency domain
 frame = 1;    % number of frame used
 Mfft  = M;    % number of FFT points in time domain
@@ -156,6 +156,7 @@ for g = 1: length(SNR)
         RDmap_label_true_target(TimeIndex+(g-1)*TotalSimulationTime,1:N*M) = reshape(target_Map(:,:,TimeIndex),1,N*M); % target
     end
 end
+
 for i = 1 :  length(SNR)*TotalSimulationTime
     RDmap_input_raw(i,:) = RDmap_input(i,:).^2;
     RDmap_input_raw_noclutter(i,:) = RDmap_input_noclutter(i,:).^2;
@@ -174,48 +175,74 @@ end
 for ii = 1:size(RDmap_input_raw,1)% size(A,1):A有幾列 = 模擬次數
     RD_map_noclutter(:,:,ii) = reshape(RDmap_input_raw_noclutter(ii,:),[N,M]); % target+noise
 end
+
+% figure(12);
+% imagesc(RD_map_clutter);
+% figure(13);
+% imagesc(RD_map_label);
+
 % 
 % % % % % 
-nmax=zeros(H,size(RDmap_input_raw_noclutter,1));
-mmax=zeros(H,size(RDmap_input_raw_noclutter,1));
-RD_map_noclutter_2=RD_map_noclutter;
-RD_map_noclutter_max=zeros(N,M,TotalSimulationTime);
-for jj = 1:size(RDmap_input_raw_noclutter,1)
-    for h = 1:H
-        [nmax(h,jj),mmax(h,jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
-        RD_map_noclutter_2(nmax(h,jj),mmax(h,jj),jj) = 0;
-        RD_map_noclutter_max(nmax(h,jj),mmax(h,jj),jj)=1;
-    end   
-    [nmaxx(:,jj),mmaxx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
-    [tn(:,jj),tm(:,jj)] = find(RD_map_label(:,:,jj)==1);
-    if sum(abs(nmaxx(:,jj)-tn(:,jj))==1)>0 || sum(abs(mmaxx(:,jj)-tm(:,jj))==1)>0
-        
-        [rdmap_clutter,rdmap_noclutter,label,noise]=newrdmap3(H,SNR);
-        RDmap_label_raw(jj,:)=noise;
-        RD_map_noclutter(:,:,jj)=rdmap_noclutter;
-        temp_rd=RD_map_clutter(:,:,jj);
-        RD_map_clutter(:,:,jj)=rdmap_clutter;
-        temp_la=RD_map_label(:,:,jj);
-        RD_map_label(:,:,jj)=label;
-        fprintf('%d,',jj)
-    end     
-end
+% nmax=zeros(H,size(RDmap_input_raw_noclutter,1));
+% mmax=zeros(H,size(RDmap_input_raw_noclutter,1));
+% RD_map_noclutter_2=RD_map_noclutter;
+% RD_map_noclutter_max=zeros(N,M,TotalSimulationTime);
+% for jj = 1:size(RDmap_input_raw_noclutter,1)
+%     for h = 1:H
+%         [nmax(h,jj),mmax(h,jj)] = find(RD_map_noclutter_2(:,:,jj)==max(max(RD_map_noclutter_2(:,:,jj))));
+%         RD_map_noclutter_2(nmax(h,jj),mmax(h,jj),jj) = 0;
+%         RD_map_noclutter_max(nmax(h,jj),mmax(h,jj),jj)=1;
+%     end   
+%     [nmaxx(:,jj),mmaxx(:,jj)] = find(RD_map_noclutter_max(:,:,jj)==1);
+%     [tn(:,jj),tm(:,jj)] = find(RD_map_label(:,:,jj)==1);
+%     if sum(abs(nmaxx(:,jj)-tn(:,jj))==1)>0 || sum(abs(mmaxx(:,jj)-tm(:,jj))==1)>0
+%         
+%         [rdmap_clutter,rdmap_noclutter,label,noise]=newrdmap3(H,SNR);
+%         RDmap_label_raw(jj,:)=noise;
+%         RD_map_noclutter(:,:,jj)=rdmap_noclutter;
+%         temp_rd=RD_map_clutter(:,:,jj);
+%         RD_map_clutter(:,:,jj)=rdmap_clutter;
+%         temp_la=RD_map_label(:,:,jj);
+%         RD_map_label(:,:,jj)=label;
+%         fprintf('%d,',jj)
+%     end     
+% end
+% 
+% figure(8);
+% imagesc(RD_map_clutter);
+
+
 % % % % % 
 % 
 % truncated (optional)
 % 
 truncated_threshold = 10;
-for iii = 1 : TotalSimulationTime
-    RDmap_truncated(:,:,iii)=RD_map_clutter(:,:,iii);
-    RDmap_input_raw_truncated(iii,:) = reshape(RDmap_truncated(:,:,iii),[],N*M);
-    RDmap_input_raw_truncated(iii,find(RDmap_input_raw_truncated(iii,:)>=truncated_threshold)) = truncated_threshold;
-%     [xx,yy]=find(RD_map_clutter(:,:,iii)>=truncated_threshold);
-%     RD_map_truncated(xx,yy,iii) = truncated_threshold;
-    RDmap_DLlabel_clutter_raw(iii,find(RDmap_DLlabel_clutter_raw(iii,:)>=truncated_threshold)) = truncated_threshold;
-end  
+% for iii = 1 : TotalSimulationTime
+%     RDmap_truncated(:,:,iii)=RD_map_clutter(:,:,iii);
+%     RDmap_input_raw_truncated(iii,:) = reshape(RDmap_truncated(:,:,iii),[],N*M);
+%     RDmap_input_raw_truncated(iii, find(RDmap_input_raw_truncated(iii,:) >= truncated_threshold) ) = truncated_threshold;
+% %     [xx,yy]=find(RD_map_clutter(:,:,iii)>=truncated_threshold);
+% %     RD_map_truncated(xx,yy,iii) = truncated_threshold;
+% %     RDmap_DLlabel_clutter_raw(iii,find(RDmap_DLlabel_clutter_raw(iii,:)>=truncated_threshold)) = truncated_threshold;
+% end  
+
+figure(8);
+imagesc(RD_map_clutter);
+figure(9);
+mesh(RD_map_clutter,'edgecolor','r');
+
+RDmap_input_raw_truncated(1,:) = reshape(RD_map_clutter(:,:,1),[],N*M);
+RDmap_input_raw_truncated(1, find(RDmap_input_raw_truncated(1,:) >= truncated_threshold) ) = truncated_threshold;
+
 for ii = 1:size(RDmap_input_raw_truncated,1)
     RD_map_truncated(:,:,ii) = reshape(RDmap_input_raw_truncated(ii,:),[N,M]); 
 end
+
+figure(10);
+imagesc(RD_map_truncated);
+figure(11);
+mesh(RD_map_truncated,'edgecolor','r');
+
 % 
 % Dynamic range compression
 % 
@@ -244,35 +271,40 @@ end
 for ii = 1:size(RDmap_input_raw_softknee,1)
     RD_map_softknee(:,:,ii) = reshape(RDmap_input_raw_softknee(ii,:),[N,M]); % Dynamic range compression: softknee
 end
+
+figure(12);
+imagesc(RD_map_softknee);
+figure(13);
+mesh(RD_map_softknee,'edgecolor','r');
+
 % % % % % 
 % 
 % RD_map
 % 
-figure(1) % 只有target
-see1 = RD_map_label(:,:,1);
-mesh(see1,'edgecolor','r');
-figure(2) % 只有noise
-see2 = reshape(RDmap_label_raw(1,:),N,M);
-mesh(see2,'edgecolor','r');
-zlim([0,10])
-figure(3) % 沒有clutter
-see3 = RD_map_noclutter(:,:,1);
-mesh(see3,'edgecolor','r');
-figure(4) % DL label noise+clutter
-see7 = reshape(RDmap_DLlabel_clutter_raw(1,:),N,M);
-mesh(see7,'edgecolor','r');
-figure(5) % 有clutter
-see6 = RD_map_clutter(:,:,1);
-mesh(see6,'edgecolor','r');
-figure(6) % 經過truncated
-see4 = reshape(RDmap_input_raw_truncated(1,:),N,M);
-mesh(see4,'edgecolor','r');
-title('truncated')
-figure(7) % Dynamic range compression
-see5 = reshape(RDmap_input_raw_softknee(1,:),N,M);
-mesh(see5,'edgecolor','r');
-title('Dynamic range compression: softknee')
-
+% figure(1) % 只有target
+% see1 = RD_map_label(:,:,1);
+% mesh(see1,'edgecolor','r');
+% figure(2) % 只有noise
+% see2 = reshape(RDmap_label_raw(1,:),N,M);
+% mesh(see2,'edgecolor','r');
+% zlim([0,10])
+% figure(3) % 沒有clutter
+% see3 = RD_map_noclutter(:,:,1);
+% mesh(see3,'edgecolor','r');
+% figure(4) % DL label noise+clutter
+% see7 = reshape(RDmap_DLlabel_clutter_raw(1,:),N,M);
+% mesh(see7,'edgecolor','r');
+% figure(5) % 有clutter
+% see6 = RD_map_clutter(:,:,1);
+% mesh(see6,'edgecolor','r');
+% figure(6) % 經過truncated
+% see4 = reshape(RDmap_input_raw_truncated(1,:),N,M);
+% mesh(see4,'edgecolor','r');
+% title('truncated')
+% figure(7) % Dynamic range compression
+% see5 = reshape(RDmap_input_raw_softknee(1,:),N,M);
+% mesh(see5,'edgecolor','r');
+% title('Dynamic range compression: softknee')
 % 
 % validation
 % 
